@@ -1,0 +1,128 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Single cached profile lookup ───────────────────────────────────────────
+    // Using inline role checks avoids multiple get() calls per request,
+    // which was causing "Missing or insufficient permissions" errors.
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function profileExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActive() {
+      return isSignedIn() && profileExists() && profile().active == true;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && profileExists() && profile().active == true && profile().role == 'super_admin';
+    }
+
+    function isBoysAdmin() {
+      return isSignedIn() && profileExists() && profile().active == true
+        && (profile().role == 'boys_admin' || profile().role == 'super_admin');
+    }
+
+    function isGirlsAdmin() {
+      return isSignedIn() && profileExists() && profile().active == true
+        && (profile().role == 'girls_admin' || profile().role == 'super_admin');
+    }
+
+
+    // ─── Users ───────────────────────────────────────────────────────────────────
+
+    match /users/{uid} {
+      // Own profile readable and writable by self (needed by /setup to fix profile data)
+      allow read, create, update: if isSignedIn() && request.auth.uid == uid;
+      // Super admin can read/write all profiles
+      allow read, write: if isSuperAdmin();
+    }
+
+
+    // ─── Boys Portal ─────────────────────────────────────────────────────────────
+
+    match /boys_students/{docId} {
+      allow read, write: if isBoysAdmin();
+    }
+
+    match /boys_receipts/{docId} {
+      allow read, write: if isBoysAdmin();
+    }
+
+    match /boys_expenses/{docId} {
+      allow read, write: if isBoysAdmin();
+    }
+
+    match /boys_events/{docId} {
+      allow read: if resource.data.isPublic == true || isBoysAdmin();
+      allow write: if isBoysAdmin();
+    }
+
+    match /boys_notices/{docId} {
+      allow read: if resource.data.isPublic == true || isBoysAdmin();
+      allow write: if isBoysAdmin();
+    }
+
+
+    // ─── Girls Portal ────────────────────────────────────────────────────────────
+
+    match /girls_students/{docId} {
+      allow read, write: if isGirlsAdmin();
+    }
+
+    match /girls_receipts/{docId} {
+      allow read, write: if isGirlsAdmin();
+    }
+
+    match /girls_expenses/{docId} {
+      allow read, write: if isGirlsAdmin();
+    }
+
+    match /girls_events/{docId} {
+      allow read: if resource.data.isPublic == true || isGirlsAdmin();
+      allow write: if isGirlsAdmin();
+    }
+
+    match /girls_notices/{docId} {
+      allow read: if resource.data.isPublic == true || isGirlsAdmin();
+      allow write: if isGirlsAdmin();
+    }
+
+
+    // ─── Shared public collections ───────────────────────────────────────────────
+
+    match /events/{docId} {
+      allow read: if resource.data.isPublic == true || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /notices/{docId} {
+      allow read: if resource.data.isPublic == true || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+
+    // ─── Activity Logs ───────────────────────────────────────────────────────────
+
+    match /activity_logs/{docId} {
+      allow read, create: if isActive();
+      allow update, delete: if isSuperAdmin();
+    }
+
+
+    // ─── Deny everything else ────────────────────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
