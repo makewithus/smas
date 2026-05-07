@@ -113,31 +113,42 @@ function HeroSlider() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Curated Unsplash images — education / campus / hostel theme
-  const heroImages = [
-    "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1400&h=600&q=80",
-    "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&h=600&q=80",
-    "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1400&h=600&q=80",
-  ];
-
   const slides = [
     {
+      image: "/image1.jpeg",
       title: "Excellence in Education Since 2005",
-      subtitle:
-        "Empowering students with knowledge and values for a brighter future",
+      subtitle: "Empowering students with knowledge and values for a brighter future",
       label: "Welcome",
     },
     {
+      image: "/image2.jpeg",
       title: "Comprehensive Student Management",
-      subtitle:
-        "Modern administration system for efficient institutional operations",
+      subtitle: "Modern administration system for efficient institutional operations",
       label: "Administration",
     },
     {
-      title: "Building Tomorrow Leaders Today",
-      subtitle:
-        "Join our community of dedicated educators and motivated learners",
+      image: "/image3.jpeg",
+      title: "Building Tomorrow's Leaders Today",
+      subtitle: "Join our community of dedicated educators and motivated learners",
       label: "Community",
+    },
+    {
+      image: "/image4.jpeg",
+      title: "Nurturing Every Student's Potential",
+      subtitle: "A caring environment where every student thrives and grows",
+      label: "Growth",
+    },
+    {
+      image: "/image5.jpeg",
+      title: "Safe & Comfortable Hostel Life",
+      subtitle: "Modern facilities and a home-like atmosphere for all students",
+      label: "Hostel",
+    },
+    {
+      image: "/image6.jpeg",
+      title: "A Legacy of Academic Excellence",
+      subtitle: "Shaping futures through discipline, dedication, and devotion",
+      label: "Excellence",
     },
   ];
 
@@ -164,10 +175,10 @@ function HeroSlider() {
       {/* Background Image */}
       <div className="absolute inset-0">
         <Image
-          src={heroImages[currentSlide]}
+          src={slides[currentSlide].image}
           alt="Hero background"
           fill
-          className="object-cover"
+          className="object-cover object-top"
           priority
         />
         <div className="absolute inset-0 bg-brand/65" />

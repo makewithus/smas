@@ -94,7 +94,7 @@ export default function BoysExpensesPage() {
 
   const handleExport = () => {
     exportToCSV(filtered.map((e) => ({
-      Category: EXPENSE_CATEGORIES?.[e.category] ?? e.category,
+      Category: EXPENSE_CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category,
       Description: e.description, Vendor: e.vendor,
       Amount: e.amount, Date: formatDate(e.createdAt?.toDate?.() ?? e.createdAt),
     })), "boys-expenses");
@@ -166,9 +166,7 @@ export default function BoysExpensesPage() {
               <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                 className="w-full h-9 px-3 text-sm rounded border focus:outline-none" style={{ borderColor: T.border, color: T.text }}>
                 <option value="">All Categories</option>
-                {EXPENSE_CATEGORIES
-                  ? Object.entries(EXPENSE_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v}</option>)
-                  : ["Utilities","Maintenance","Stationery","Salary","Transport","Miscellaneous"].map((c) => <option key={c} value={c}>{c}</option>)}
+                {EXPENSE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             {activeFilters > 0 && (
@@ -229,7 +227,7 @@ export default function BoysExpensesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs px-2 py-0.5 rounded" style={{ background: T.hover, color: T.text }}>
-                        {EXPENSE_CATEGORIES?.[e.category] ?? e.category ?? "—"}
+                        {EXPENSE_CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category ?? "—"}
                       </span>
                     </td>
                     <td className="px-4 py-3">

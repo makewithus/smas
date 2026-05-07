@@ -1,63 +1,82 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Receipt, Search, X } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Search, User } from "lucide-react";
 import { db } from "@/src/lib/firebase";
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "firebase/firestore";
+import {
+  collection, addDoc, getDocs, query, orderBy, serverTimestamp,
+} from "firebase/firestore";
 import { toast } from "sonner";
-import PageHeader from "@/src/components/shared/PageHeader";
 import { PAYMENT_METHODS, MONTHS } from "@/src/lib/constants";
-import { generateReceiptNumber, formatCurrency } from "@/src/lib/utils";
-import { useAuth } from '@/src/context/AuthContext'
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/src/context/AuthContext";
 
-export default function AddGirlsReceiptPage() {
+const COLLECTION = "girls_receipts";
+const STUDENTS_COLLECTION = "girls_students";
+const PORTAL = "girls";
+
+export default function AddReceiptPage() {
   const router = useRouter();
-  const { userProfile } = useAuth()
+  const { userProfile } = useAuth();
 
-  const searchParams = useSearchParams();
-  const preSelectedStudentId = searchParams.get("studentId");
-  const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showStudentSearch, setShowStudentSearch] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [studentSearch, setStudentSearch] = useState("");
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
   const [formData, setFormData] = useState({
-    feeMonth: "", feeYear: new Date().getFullYear().toString(), amount: "",
-    paymentMethod: "cash", paymentDate: new Date().toISOString().split("T")[0],
-    transactionId: "", notes: "", status: "paid",
+    feeMonth: "",
+    feeYear: String(new Date().getFullYear()),
+    amount: "",
+    paymentMethod: "",
+    paymentDate: new Date().toISOString().split("T")[0],
+    notes: "",
+    status: "paid",
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!userProfile) return
-   fetchStudents();
-  }, [userProfile?.uid]);
-  useEffect(() => {
-    if (preSelectedStudentId && students.length > 0) {
-      const student = students.find((s) => s.id === preSelectedStudentId);
-      if (student) {
-        setSelectedStudent(student);
-        setFormData((prev) => ({ ...prev, amount: student.monthlyFee?.toString() || "" }));
+    if (!userProfile) return;
+    (async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, STUDENTS_COLLECTION), orderBy("name"))
+        );
+        setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load students");
+      } finally {
+        setStudentsLoading(false);
       }
-    }
-  }, [preSelectedStudentId, students]);
+    })();
+  }, [userProfile]);
 
-  const fetchStudents = async () => {
-    try {
-      const q = query(collection(db, "girls_students"), orderBy("name"));
-      const snapshot = await getDocs(q);
-      setStudents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    } catch (error) {
-      toast.error("Failed to fetch students");
-    }
+  const filteredStudents = useMemo(() => {
+    const q = studentSearch.toLowerCase();
+    if (!q) return students.slice(0, 8);
+    return students
+      .filter((s) =>
+        s.name?.toLowerCase().includes(q) ||
+        s.rollNumber?.toLowerCase().includes(q) ||
+        s.class?.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [students, studentSearch]);
+
+  const handleStudentSelect = (student) => {
+    setSelectedStudent(student);
+    setStudentSearch(student.name);
+    setShowDropdown(false);
+    if (errors.student) setErrors((prev) => ({ ...prev, student: "" }));
   };
-
-  const filteredStudents = students.filter((s) =>
-    s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.rollNumber?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,112 +84,210 @@ export default function AddGirlsReceiptPage() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSelectStudent = (student) => {
-    setSelectedStudent(student);
-    setFormData((prev) => ({ ...prev, amount: student.monthlyFee?.toString() || "" }));
-    setShowStudentSearch(false);
-    setSearchQuery("");
+  const handleSelect = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!selectedStudent) newErrors.student = "Please select a student";
-    if (!formData.feeMonth) newErrors.feeMonth = "Fee month is required";
-    if (!formData.amount) newErrors.amount = "Amount is required";
-    if (!formData.paymentDate) newErrors.paymentDate = "Payment date is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = () => {
+    const e = {};
+    if (!selectedStudent) e.student = "Please select a student";
+    if (!formData.feeMonth) e.feeMonth = "Fee month is required";
+    if (!formData.feeYear.trim()) e.feeYear = "Year is required";
+    if (!formData.amount) e.amount = "Amount is required";
+    else if (isNaN(Number(formData.amount)) || Number(formData.amount) <= 0)
+      e.amount = "Enter a valid positive amount";
+    if (!formData.paymentMethod) e.paymentMethod = "Payment method is required";
+    if (!formData.paymentDate) e.paymentDate = "Payment date is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return toast.error("Please fix the errors");
+    if (!validate()) return;
     setLoading(true);
     try {
-      const receiptNumber = generateReceiptNumber("G");
-      await addDoc(collection(db, "girls_receipts"), {
-        receiptNumber, studentId: selectedStudent.id, studentName: selectedStudent.name,
-        studentRollNumber: selectedStudent.rollNumber, studentClass: selectedStudent.class,
-        studentPhone: selectedStudent.phone, feeMonth: `${formData.feeMonth} ${formData.feeYear}`,
-        amount: parseFloat(formData.amount) || 0, paymentMethod: formData.paymentMethod,
-        paymentDate: formData.paymentDate, transactionId: formData.transactionId,
-        notes: formData.notes, status: formData.status,
-        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      const receiptNumber = `RCP-G-${Date.now()}`;
+      await addDoc(collection(db, COLLECTION), {
+        receiptNumber,
+        studentName: selectedStudent.name,
+        studentDocId: selectedStudent.id,
+        studentRollNumber: selectedStudent.rollNumber || "",
+        studentClass: selectedStudent.class,
+        studentPhone: selectedStudent.phone || "",
+        feeMonth: formData.feeMonth,
+        feeYear: formData.feeYear,
+        amount: Number(formData.amount),
+        paymentMethod: formData.paymentMethod,
+        paymentDate: formData.paymentDate,
+        notes: formData.notes,
+        status: formData.status,
+        portal: PORTAL,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
-      toast.success("Receipt created successfully");
-      router.push("/girls/receipts");
-    } catch (error) {
-      toast.error("Failed to create receipt");
+      toast.success("Receipt added successfully");
+      router.push(`/${PORTAL}/receipts`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to add receipt");
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClasses = (error) => `w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-pink-500 ${error ? "border-red-500 bg-red-50" : "border-gray-300"}`;
-  const currentYear = new Date().getFullYear();
-  const years = [currentYear - 1, currentYear, currentYear + 1];
-
   return (
-    <div className="space-y-6">
-      <PageHeader title="Create Receipt" description="Generate a new fee receipt"
-        actions={<Link href="/girls/receipts" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"><ArrowLeft className="h-4 w-4" />Back</Link>} />
+    <div>
+      <div className="mb-6">
+        <Link href={`/${PORTAL}/receipts`}
+          className="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900 mb-2">
+          <ArrowLeft size={16} /> Receipts
+        </Link>
+        <h1 className="text-xl font-medium text-neutral-900">Add New Receipt</h1>
+        <p className="text-sm text-neutral-600 mt-0.5">Record a fee payment receipt</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center gap-3"><div className="p-2 bg-pink-100 rounded-lg"><Receipt className="h-5 w-5 text-pink-600" /></div><h2 className="text-lg font-semibold">Select Student</h2></div>
-          </div>
-          <div className="p-6">
-            {selectedStudent ? (
-              <div className="flex items-center justify-between p-4 bg-pink-50 border border-pink-200 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-pink-100 flex items-center justify-center"><span className="text-pink-600 font-semibold text-lg">{selectedStudent.name?.charAt(0)}</span></div>
-                  <div><p className="font-semibold">{selectedStudent.name}</p><p className="text-sm text-gray-600">Roll: {selectedStudent.rollNumber} | Class: {selectedStudent.class}</p><p className="text-sm text-gray-600">Monthly Fee: {formatCurrency(selectedStudent.monthlyFee || 0)}</p></div>
-                </div>
-                <button type="button" onClick={() => setSelectedStudent(null)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><X className="h-5 w-5" /></button>
-              </div>
-            ) : (
+      <form onSubmit={handleSubmit}>
+        <div className="max-w-2xl space-y-5">
+          {/* Student Selection */}
+          <div className="bg-white border border-[#E8DFD4] rounded-md p-6">
+            <div className="section-header">Select Student</div>
+            <div className="relative">
+              <label className="label label-required">Student</label>
               <div className="relative">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input type="text" placeholder="Search student..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setShowStudentSearch(true); }} onFocus={() => setShowStudentSearch(true)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg ${errors.student ? "border-red-500" : "border-gray-300"}`} />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                <input
+                  type="text"
+                  value={studentSearch}
+                  onChange={(e) => {
+                    setStudentSearch(e.target.value);
+                    setSelectedStudent(null);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  className={`input pl-9 ${errors.student ? "input-error" : ""}`}
+                  placeholder={studentsLoading ? "Loading students…" : "Search by name, roll number or class"}
+                  disabled={studentsLoading}
+                />
+              </div>
+              {errors.student && <p className="text-sm text-red-500 mt-1">{errors.student}</p>}
+
+              {showDropdown && filteredStudents.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-[#E8DFD4] rounded-md shadow-md overflow-hidden">
+                  {filteredStudents.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleStudentSelect(s)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F5EFE8] transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center shrink-0">
+                        <User size={14} className="text-neutral-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-neutral-900">{s.name}</p>
+                        <p className="text-xs text-neutral-500">{s.rollNumber} · {s.class}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                {errors.student && <p className="mt-1 text-sm text-red-500">{errors.student}</p>}
-                {showStudentSearch && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                    {filteredStudents.length === 0 ? <p className="p-4 text-gray-500 text-center">No students found</p> : filteredStudents.slice(0, 10).map((student) => (
-                      <button key={student.id} type="button" onClick={() => handleSelectStudent(student)} className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 border-b last:border-b-0">
-                        <div className="h-10 w-10 rounded-full bg-pink-100 flex items-center justify-center"><span className="text-pink-600 font-semibold">{student.name?.charAt(0)}</span></div>
-                        <div className="text-left"><p className="font-medium">{student.name}</p><p className="text-sm text-gray-500">Roll: {student.rollNumber}</p></div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              )}
+            </div>
+
+            {selectedStudent && (
+              <div className="mt-3 p-3 bg-[#F5EFE8] rounded border border-[#E8DFD4]">
+                <p className="text-sm font-medium text-neutral-900">{selectedStudent.name}</p>
+                <p className="text-xs text-neutral-600 mt-0.5">
+                  {selectedStudent.rollNumber && `${selectedStudent.rollNumber} · `}
+                  {selectedStudent.class}
+                  {selectedStudent.phone && ` · ${selectedStudent.phone}`}
+                </p>
               </div>
             )}
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50"><h2 className="text-lg font-semibold">Receipt Details</h2></div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div><label className="block text-sm font-medium mb-1">Fee Month *</label><select name="feeMonth" value={formData.feeMonth} onChange={handleChange} className={inputClasses(errors.feeMonth)}><option value="">Select month</option>{MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}</select>{errors.feeMonth && <p className="mt-1 text-sm text-red-500">{errors.feeMonth}</p>}</div>
-            <div><label className="block text-sm font-medium mb-1">Fee Year</label><select name="feeYear" value={formData.feeYear} onChange={handleChange} className={inputClasses()}>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select></div>
-            <div><label className="block text-sm font-medium mb-1">Amount *</label><input type="number" name="amount" value={formData.amount} onChange={handleChange} className={inputClasses(errors.amount)} placeholder="Enter amount" />{errors.amount && <p className="mt-1 text-sm text-red-500">{errors.amount}</p>}</div>
-            <div><label className="block text-sm font-medium mb-1">Payment Method</label><select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className={inputClasses()}>{Object.entries(PAYMENT_METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-            <div><label className="block text-sm font-medium mb-1">Payment Date *</label><input type="date" name="paymentDate" value={formData.paymentDate} onChange={handleChange} className={inputClasses(errors.paymentDate)} />{errors.paymentDate && <p className="mt-1 text-sm text-red-500">{errors.paymentDate}</p>}</div>
-            <div><label className="block text-sm font-medium mb-1">Status</label><select name="status" value={formData.status} onChange={handleChange} className={inputClasses()}><option value="paid">Paid</option><option value="pending">Pending</option><option value="partial">Partial</option></select></div>
-            <div className="md:col-span-2 lg:col-span-3"><label className="block text-sm font-medium mb-1">Transaction ID</label><input type="text" name="transactionId" value={formData.transactionId} onChange={handleChange} className={inputClasses()} placeholder="Enter transaction ID" /></div>
-            <div className="md:col-span-2 lg:col-span-3"><label className="block text-sm font-medium mb-1">Notes</label><textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className={inputClasses()} placeholder="Additional notes..." /></div>
+          {/* Fee Details */}
+          <div className="bg-white border border-[#E8DFD4] rounded-md p-6">
+            <div className="section-header">Fee Details</div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="label label-required">Fee Month</label>
+                <Select value={formData.feeMonth} onValueChange={(v) => handleSelect("feeMonth", v)}>
+                  <SelectTrigger className={`w-full h-9.5 ${errors.feeMonth ? "border-red-500" : "border-[#E8DFD4]"}`}>
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={4}>
+                    {MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {errors.feeMonth && <p className="text-sm text-red-500 mt-1">{errors.feeMonth}</p>}
+              </div>
+
+              <div>
+                <label className="label label-required">Year</label>
+                <input name="feeYear" value={formData.feeYear} onChange={handleChange}
+                  className={`input ${errors.feeYear ? "input-error" : ""}`} placeholder="2026" />
+                {errors.feeYear && <p className="text-sm text-red-500 mt-1">{errors.feeYear}</p>}
+              </div>
+
+              <div>
+                <label className="label label-required">Amount (Rs.)</label>
+                <input name="amount" type="number" min="0" step="0.01" value={formData.amount}
+                  onChange={handleChange}
+                  className={`input ${errors.amount ? "input-error" : ""}`} placeholder="0.00" />
+                {errors.amount && <p className="text-sm text-red-500 mt-1">{errors.amount}</p>}
+              </div>
+
+              <div>
+                <label className="label label-required">Payment Method</label>
+                <Select value={formData.paymentMethod} onValueChange={(v) => handleSelect("paymentMethod", v)}>
+                  <SelectTrigger className={`w-full h-9.5 ${errors.paymentMethod ? "border-red-500" : "border-[#E8DFD4]"}`}>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={4}>
+                    {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {errors.paymentMethod && <p className="text-sm text-red-500 mt-1">{errors.paymentMethod}</p>}
+              </div>
+
+              <div>
+                <label className="label label-required">Payment Date</label>
+                <input type="date" name="paymentDate" value={formData.paymentDate}
+                  onChange={handleChange}
+                  className={`input ${errors.paymentDate ? "input-error" : ""}`} />
+                {errors.paymentDate && <p className="text-sm text-red-500 mt-1">{errors.paymentDate}</p>}
+              </div>
+
+              <div>
+                <label className="label">Status</label>
+                <Select value={formData.status} onValueChange={(v) => handleSelect("status", v)}>
+                  <SelectTrigger className="w-full h-9.5 border-[#E8DFD4]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={4}>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="label">Notes</label>
+                <textarea name="notes" value={formData.notes} onChange={handleChange}
+                  rows={3} className="input h-auto py-2.5 resize-none" placeholder="Additional notes (optional)" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6 pt-5 border-t border-[#E8DFD4]">
+              <Link href={`/${PORTAL}/receipts`} className="btn-ghost">Cancel</Link>
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Save size={15} /> Save Receipt</>}
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-4">
-          <Link href="/girls/receipts" className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</Link>
-          <button type="submit" disabled={loading} className="inline-flex items-center gap-2 px-6 py-2.5 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50">
-            {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Creating...</> : <><Save className="h-4 w-4" />Create Receipt</>}
-          </button>
         </div>
       </form>
     </div>
