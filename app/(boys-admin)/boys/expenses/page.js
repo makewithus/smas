@@ -14,6 +14,10 @@ import EmptyState from "@/src/components/shared/EmptyState";
 import { formatDate, formatCurrency, exportToCSV } from "@/src/lib/utils";
 import { EXPENSE_CATEGORIES } from "@/src/lib/constants";
 import { useAuth } from "@/src/context/AuthContext";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 const T = { green: "#1B4332", text: "#3D3227", muted: "#8C7B6B", border: "#E8DFD4", hover: "#F5EFE8", accent: "#D39542" };
 
@@ -160,18 +164,22 @@ export default function BoysExpensesPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3" style={{ borderTop: `1px solid ${T.border}` }}>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: T.muted }}>Category</label>
-              <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                className="w-full h-9 px-3 text-sm rounded border focus:outline-none" style={{ borderColor: T.border, color: T.text }}>
-                <option value="">All Categories</option>
-                {EXPENSE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">Category</label>
+              <Select value={filters.category || "all"} onValueChange={(v) => setFilters({ ...filters, category: v === "all" ? "" : v })}>
+                <SelectTrigger className="h-9 text-sm border-[#E8DFD4] text-neutral-800">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             {activeFilters > 0 && (
               <div className="md:col-span-2 flex items-end">
-                <button onClick={clearFilters} className="text-xs flex items-center gap-1" style={{ color: T.muted }}><X size={12} /> Clear filters</button>
+                <button onClick={clearFilters} className="text-xs flex items-center gap-1 text-neutral-500 hover:text-neutral-800"><X size={12} /> Clear filters</button>
               </div>
             )}
           </div>
@@ -211,7 +219,7 @@ export default function BoysExpensesPage() {
                     <input type="checkbox" checked={selected.length === paginated.length && paginated.length > 0} onChange={handleSelectAll} style={{ accentColor: T.green }} />
                   </th>
                   {["Description", "Category", "Amount", "Date", ""].map((h) => (
-                    <th key={h} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h === "" ? "text-right" : "text-left"}`} style={{ color: T.muted }}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h === "" ? "text-right" : "text-left"}`} style={{ color: "#4B5563" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -234,13 +242,13 @@ export default function BoysExpensesPage() {
                       <p className="text-sm font-semibold" style={{ color: "#b45309" }}>{formatCurrency(e.amount)}</p>
                       {e.paymentMethod && <p className="text-xs mt-0.5" style={{ color: T.muted }}>{e.paymentMethod}</p>}
                     </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: T.muted }}>
+                    <td className="px-4 py-3 text-sm font-medium" style={{ color: T.muted }}>
                       {formatDate(e.expenseDate?.toDate?.() ?? e.expenseDate ?? e.createdAt?.toDate?.() ?? e.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Link href={`/boys/expenses/${e.id}/edit`} style={{ color: T.muted }} className="p-1.5 rounded hover:bg-[#F5EFE8]"><Edit size={15} /></Link>
-                        <button onClick={() => setDeleteDialog({ open: true, expense: e })} style={{ color: T.muted }} className="p-1.5 rounded hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+                        <Link href={`/boys/expenses/${e.id}/edit`} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors" title="Edit"><Edit size={13} /></Link>
+                        <button onClick={() => setDeleteDialog({ open: true, expense: e })} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-red-600 hover:border-red-400 hover:bg-red-50 transition-colors" title="Delete"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>

@@ -99,13 +99,13 @@ export const FIREBASE_ERROR_MESSAGES = {
 
 // Institution Info (can be customized)
 export const INSTITUTION = {
-  name: "Student Administration",
-  fullName: "Student Management & Administration System",
-  shortName: "SMAS",
-  address: "123 Education Street, City - 123456",
-  phone: "+91 98765 43210",
-  email: "admin@institution.edu",
-  website: "www.institution.edu",
+  name: "Hudaibiyya Arabic College",
+  fullName: "Hudaibiyya Arabic College",
+  shortName: "HAC",
+  address: "Hudaibiyya Islamic Charitable Trust, Vottancheri",
+  phone: "+91 94621 38738",
+  email: "hudaibiyyacollege@gmail.com",
+  website: "www.hudaibiyyacollege.edu",
 };
 
 // Default Notices for Fallback

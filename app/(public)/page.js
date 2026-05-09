@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { db } from "@/src/lib/firebase";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import {
   ChevronLeft,
   ChevronRight,
@@ -111,29 +113,29 @@ const getEventImg = (title = "", w = 400, h = 200) => {
 // Hero Slider Component
 function HeroSlider() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [autoKey, setAutoKey] = useState(0); // reset timer on manual nav
 
   const slides = [
     {
-      image: "/image1.jpeg",
+      image: "/image4.jpeg",
       title: "Excellence in Education Since 2005",
       subtitle: "Empowering students with knowledge and values for a brighter future",
       label: "Welcome",
     },
     {
-      image: "/image2.jpeg",
+      image: "/image1.jpeg",
       title: "Comprehensive Student Management",
       subtitle: "Modern administration system for efficient institutional operations",
       label: "Administration",
     },
     {
-      image: "/image3.jpeg",
+      image: "/image2.jpeg",
       title: "Building Tomorrow's Leaders Today",
       subtitle: "Join our community of dedicated educators and motivated learners",
       label: "Community",
     },
     {
-      image: "/image4.jpeg",
+      image: "/image3.jpeg",
       title: "Nurturing Every Student's Potential",
       subtitle: "A caring environment where every student thrives and grows",
       label: "Growth",
@@ -158,19 +160,27 @@ function HeroSlider() {
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setAutoKey((k) => k + 1); // reset auto-play timer
+  };
+
+  const goToSlide = (idx) => {
+    setCurrentSlide(idx);
+    setAutoKey((k) => k + 1); // reset auto-play timer
   };
 
   useEffect(() => {
-    if (isPaused) return;
     const interval = setInterval(nextSlide, 4000);
     return () => clearInterval(interval);
-  }, [isPaused, nextSlide]);
+  }, [nextSlide, autoKey]);
+
+  const handleNext = () => {
+    nextSlide();
+    setAutoKey((k) => k + 1);
+  };
 
   return (
     <section
       className="relative h-95 md:h-145 overflow-hidden"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
       {/* Background Image */}
       <div className="absolute inset-0">
@@ -214,7 +224,7 @@ function HeroSlider() {
         <ChevronLeft size={24} />
       </button>
       <button
-        onClick={nextSlide}
+        onClick={handleNext}
         className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
         aria-label="Next slide"
       >
@@ -226,7 +236,7 @@ function HeroSlider() {
         {slides.map((_, idx) => (
           <button
             key={idx}
-            onClick={() => setCurrentSlide(idx)}
+            onClick={() => goToSlide(idx)}
             className={`w-2 h-2 rounded-full transition-colors ${
               idx === currentSlide ? "bg-white" : "bg-white/40"
             }`}
@@ -243,8 +253,22 @@ function NoticeTicker() {
   const [notices, setNotices] = useState(DEFAULT_NOTICES);
 
   useEffect(() => {
-    // In production, this would fetch from API
-    // For now, using default notices
+    const fetchNotices = async () => {
+      try {
+        const q = query(
+          collection(db, "boys_notices"),
+          where("enabled", "==", true),
+          orderBy("createdAt", "desc"),
+          limit(10)
+        );
+        const snap = await getDocs(q);
+        const texts = snap.docs.map((d) => d.data().text).filter(Boolean);
+        if (texts.length > 0) setNotices(texts);
+      } catch {
+        // fallback to defaults
+      }
+    };
+    fetchNotices();
   }, []);
 
   return (
@@ -284,15 +308,10 @@ function IntroSection() {
             </h2>
             <div className="w-12 h-0.5 bg-accent mb-5" />
             <p className="text-md text-neutral-800/80 leading-relaxed mb-4">
-              Our institution has been a beacon of educational excellence for
-              over two decades. We provide a nurturing environment where
-              students can thrive academically, socially, and personally.
+              Hudaibiyya Arabic College, run by Hudaibiyya Islamic Charitable Trust, Vottancheri, has been a beacon of educational excellence for over two decades. We provide a nurturing environment where students can thrive academically, socially, and spiritually.
             </p>
             <p className="text-md text-neutral-800/80 leading-relaxed mb-8">
-              With dedicated faculty, modern facilities, and a comprehensive
-              curriculum, we prepare our students for the challenges of tomorrow
-              while instilling values that will guide them throughout their
-              lives.
+              With dedicated faculty, modern facilities, and a comprehensive curriculum rooted in Islamic values, we prepare our students for the challenges of tomorrow while instilling values that will guide them throughout their lives.
             </p>
 
             {/* Stats */}
@@ -309,12 +328,12 @@ function IntroSection() {
           {/* Image */}
           <div className="relative">
             <Image
-              src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=600&h=450&q=80"
+              src="/image3.jpeg"
               alt="Institution building"
               width={600}
               height={450}
               loading="eager"
-              className="rounded-md border border-[#E8DFD4] object-cover"
+              className="rounded-md border border-[#E8DFD4] object-cover w-full h-auto"
             />
           </div>
         </div>
@@ -329,34 +348,30 @@ function EventsSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulated events data
-    setEvents([
-      {
-        id: "1",
-        title: "Annual Sports Day",
-        description:
-          "Join us for the annual sports competition featuring track events, team sports, and more.",
-        date: "2024-03-15",
-        venue: "Main Ground",
-      },
-      {
-        id: "2",
-        title: "Science Exhibition",
-        description:
-          "Students showcase their innovative science projects and experiments.",
-        date: "2024-03-20",
-        venue: "Science Block",
-      },
-      {
-        id: "3",
-        title: "Cultural Festival",
-        description:
-          "A celebration of art, music, dance, and cultural performances by students.",
-        date: "2024-03-25",
-        venue: "Auditorium",
-      },
-    ]);
-    setLoading(false);
+    const fetchEvents = async () => {
+      try {
+        // Try boys_events and girls_events for public events
+        const q = query(
+          collection(db, "boys_events"),
+          where("isPublic", "==", true),
+          orderBy("date", "desc"),
+          limit(3)
+        );
+        const snap = await getDocs(q);
+        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (items.length > 0) {
+          setEvents(items);
+        } else {
+          // fallback placeholder
+          setEvents([]);
+        }
+      } catch {
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
   }, []);
 
   return (

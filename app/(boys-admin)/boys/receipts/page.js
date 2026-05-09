@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Search, Filter, Download, Trash2, Eye, Printer, Receipt, IndianRupee, X } from "lucide-react";
+import { Plus, Search, Filter, Download, Trash2, Eye, Printer, Receipt, IndianRupee, X, ChevronDown } from "lucide-react";
 import { db } from "@/src/lib/firebase";
 import { collection, query, getDocs, deleteDoc, doc, orderBy, writeBatch } from "firebase/firestore";
 import { toast } from "sonner";
@@ -16,6 +16,10 @@ import EmptyState from "@/src/components/shared/EmptyState";
 import { formatDate, formatCurrency, exportToCSV } from "@/src/lib/utils";
 import { PAYMENT_METHODS, MONTHS } from "@/src/lib/constants";
 import { useAuth } from "@/src/context/AuthContext";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 const T = { green: "#1B4332", text: "#3D3227", muted: "#8C7B6B", border: "#E8DFD4", hover: "#F5EFE8", accent: "#D39542" };
 const MONTHS_LIST = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -162,36 +166,51 @@ export default function BoysReceiptsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3" style={{ borderTop: `1px solid ${T.border}` }}>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: T.muted }}>Status</label>
-              <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full h-9 px-3 text-sm rounded border focus:outline-none" style={{ borderColor: T.border, color: T.text }}>
-                <option value="">All Status</option>
-                <option value="paid">Paid</option><option value="pending">Pending</option>
-                <option value="partial">Partial</option><option value="cancelled">Cancelled</option>
-              </select>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">Status</label>
+              <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
+                <SelectTrigger className="h-9 text-sm border-[#E8DFD4] text-neutral-800">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: T.muted }}>Payment Method</label>
-              <select value={filters.paymentMethod} onChange={(e) => setFilters({ ...filters, paymentMethod: e.target.value })}
-                className="w-full h-9 px-3 text-sm rounded border focus:outline-none" style={{ borderColor: T.border, color: T.text }}>
-                <option value="">All Methods</option>
-                {PAYMENT_METHODS ? Object.entries(PAYMENT_METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)
-                  : ["Cash","Online Transfer","Cheque","Bank Deposit"].map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">Payment Method</label>
+              <Select value={filters.paymentMethod || "all"} onValueChange={(v) => setFilters({ ...filters, paymentMethod: v === "all" ? "" : v })}>
+                <SelectTrigger className="h-9 text-sm border-[#E8DFD4] text-neutral-800">
+                  <SelectValue placeholder="All Methods" />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  <SelectItem value="all">All Methods</SelectItem>
+                  {(Array.isArray(PAYMENT_METHODS) ? PAYMENT_METHODS : ["Cash","Online Transfer","Cheque","Bank Transfer","Bank Deposit"]).map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: T.muted }}>Fee Month</label>
-              <select value={filters.month} onChange={(e) => setFilters({ ...filters, month: e.target.value })}
-                className="w-full h-9 px-3 text-sm rounded border focus:outline-none" style={{ borderColor: T.border, color: T.text }}>
-                <option value="">All Months</option>
-                {(MONTHS || MONTHS_LIST).map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">Fee Month</label>
+              <Select value={filters.month || "all"} onValueChange={(v) => setFilters({ ...filters, month: v === "all" ? "" : v })}>
+                <SelectTrigger className="h-9 text-sm border-[#E8DFD4] text-neutral-800">
+                  <SelectValue placeholder="All Months" />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {(MONTHS || MONTHS_LIST).map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             {activeFilters > 0 && (
               <div className="md:col-span-3">
-                <button onClick={clearFilters} className="text-xs flex items-center gap-1" style={{ color: T.muted }}><X size={12} /> Clear filters</button>
+                <button onClick={clearFilters} className="text-xs flex items-center gap-1 text-neutral-500 hover:text-neutral-800"><X size={12} /> Clear filters</button>
               </div>
             )}
           </div>
@@ -231,7 +250,7 @@ export default function BoysReceiptsPage() {
                     <input type="checkbox" checked={selected.length === paginated.length && paginated.length > 0} onChange={handleSelectAll} style={{ accentColor: T.green }} />
                   </th>
                   {["Receipt", "Student", "Fee Period", "Amount", "Status", ""].map((h) => (
-                    <th key={h} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h === "" ? "text-right" : "text-left"}`} style={{ color: T.muted }}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h === "" ? "text-right" : "text-left"}`} style={{ color: "#4B5563" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -257,9 +276,9 @@ export default function BoysReceiptsPage() {
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Link href={`/boys/receipts/${r.id}`} style={{ color: T.muted }} className="p-1.5 rounded hover:bg-[#F5EFE8]"><Eye size={15} /></Link>
-                        <Link href={`/boys/receipts/${r.id}/print`} style={{ color: T.muted }} className="p-1.5 rounded hover:bg-[#F5EFE8]"><Printer size={15} /></Link>
-                        <button onClick={() => setDeleteDialog({ open: true, receipt: r })} style={{ color: T.muted }} className="p-1.5 rounded hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+                        <Link href={`/boys/receipts/${r.id}`} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-brand hover:border-brand hover:bg-[#F0FAF4] transition-colors" title="View"><Eye size={13} /></Link>
+                        <Link href={`/boys/receipts/${r.id}/print`} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors" title="Print"><Printer size={13} /></Link>
+                        <button onClick={() => setDeleteDialog({ open: true, receipt: r })} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-red-600 hover:border-red-400 hover:bg-red-50 transition-colors" title="Delete"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>

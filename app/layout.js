@@ -16,9 +16,9 @@ const newsreader = Newsreader({
 });
 
 export const metadata = {
-  title: "Student Administration System",
+  title: "Hudaibiyya Arabic College",
   description:
-    "Complete student management and administration system for educational institutions",
+    "Student management and administration system for Hudaibiyya Arabic College",
   icons: {
     icon: "/favicon.ico",
   },

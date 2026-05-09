@@ -136,7 +136,7 @@ export default function AdminLayout({ children, portal }) {
               <span className="font-serif text-white text-lg">S</span>
             </div>
             <span className="font-serif text-md text-white">
-              Administration
+              Hudaibiyya College
             </span>
           </div>
           <div className="mt-3">

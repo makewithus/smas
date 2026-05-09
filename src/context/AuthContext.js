@@ -165,7 +165,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("userProfile");
       localStorage.removeItem("portal");
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        window.location.href = "/";
       }
     } catch (error) {
       console.error("Error signing out:", error);

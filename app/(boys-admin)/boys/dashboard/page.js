@@ -35,6 +35,10 @@ import {
 } from "@/src/lib/utils";
 import StatusBadge from "@/src/components/shared/StatusBadge";
 import { useAuth } from "@/src/context/AuthContext";
+import { db } from "@/src/lib/firebase";
+import {
+  collection, query, getDocs, orderBy, limit, where,
+} from "firebase/firestore";
 
 const PORTAL = "boys";
 
@@ -80,140 +84,132 @@ export default function DashboardPage() {
   const [chartPeriod, setChartPeriod] = useState("6months");
 
   useEffect(() => {
-    // Simulate API calls
+    if (!userProfile) return;
     const fetchData = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      setLoading(true);
+      try {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
 
-      // Mock stats
-      setStats({
-        totalStudents: 156,
-        activeStudents: 142,
-        inactiveStudents: 14,
-        monthlyExpenses: 45600,
-        upcomingEvents: 3,
-      });
+        // ── Students
+        const studentsSnap = await getDocs(collection(db, "boys_students"));
+        const allStudents = studentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const activeStudents = allStudents.filter((s) => s.status === "active");
+        const inactiveStudents = allStudents.filter((s) => s.status !== "active");
 
-      // Mock chart data
-      setChartData({
-        expensesByMonth: [
-          { month: "Jan", amount: 35000 },
-          { month: "Feb", amount: 42000 },
-          { month: "Mar", amount: 38000 },
-          { month: "Apr", amount: 45000 },
-          { month: "May", amount: 52000 },
-          { month: "Jun", amount: 45600 },
-        ],
-        studentStatus: {
-          active: 142,
-          inactive: 14,
-        },
-      });
+        // Recent 5 students
+        const sortedStudents = [...allStudents].sort((a, b) => {
+          const aDate = a.createdAt?.toDate?.() ?? new Date(a.admissionDate ?? 0);
+          const bDate = b.createdAt?.toDate?.() ?? new Date(b.admissionDate ?? 0);
+          return bDate - aDate;
+        });
+        setRecentStudents(sortedStudents.slice(0, 5).map((s) => ({
+          id: s.studentId || s.id,
+          docId: s.id,
+          name: s.name,
+          class: s.class,
+          status: s.status,
+          date: s.admissionDate || s.createdAt?.toDate?.()?.toISOString()?.split("T")[0] || "",
+        })));
 
-      // Mock recent students
-      setRecentStudents([
-        {
-          id: "STU-B-2024-0156",
-          name: "Ahmed Khan",
-          class: "Class 10",
-          status: "active",
-          date: "2024-03-10",
-        },
-        {
-          id: "STU-B-2024-0155",
-          name: "Bilal Ahmad",
-          class: "Class 9",
-          status: "active",
-          date: "2024-03-09",
-        },
-        {
-          id: "STU-B-2024-0154",
-          name: "Hamza Ali",
-          class: "Class 8",
-          status: "active",
-          date: "2024-03-08",
-        },
-        {
-          id: "STU-B-2024-0153",
-          name: "Usman Malik",
-          class: "Class 7",
-          status: "inactive",
-          date: "2024-03-07",
-        },
-        {
-          id: "STU-B-2024-0152",
-          name: "Zain Abbas",
-          class: "Class 6",
-          status: "active",
-          date: "2024-03-06",
-        },
-      ]);
+        // ── Expenses
+        const expensesSnap = await getDocs(collection(db, "boys_expenses"));
+        const allExpenses = expensesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      // Mock upcoming events
-      setUpcomingEvents([
-        {
-          id: "1",
-          title: "Annual Sports Day",
-          date: "2024-03-15",
-          venue: "Main Ground",
-        },
-        {
-          id: "2",
-          title: "Science Exhibition",
-          date: "2024-03-20",
-          venue: "Science Block",
-        },
-        {
-          id: "3",
-          title: "Cultural Festival",
-          date: "2024-03-25",
-          venue: "Auditorium",
-        },
-      ]);
+        // Monthly expenses for current month
+        const monthlyExpenses = allExpenses
+          .filter((e) => {
+            const d = e.createdAt?.toDate?.() ?? (e.expenseDate ? new Date(e.expenseDate) : null);
+            return d && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+          })
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // Mock activity logs
-      setActivityLogs([
-        {
-          id: "1",
-          action: "student_added",
-          entityName: "Ahmed Khan",
-          adminName: "Admin",
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        },
-        {
-          id: "2",
-          action: "expense_added",
-          entityName: "Electricity Bill",
-          adminName: "Admin",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        },
-        {
-          id: "3",
-          action: "receipt_generated",
-          entityName: "RCP-B-2024-0089",
-          adminName: "Admin",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4),
-        },
-        {
-          id: "4",
-          action: "notice_published",
-          entityName: "Fee Reminder",
-          adminName: "Admin",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6),
-        },
-        {
-          id: "5",
-          action: "student_added",
-          entityName: "Bilal Ahmad",
-          adminName: "Admin",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        },
-      ]);
+        // Build last 6 months expense chart data
+        const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const expensesByMonth = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(currentYear, currentMonth - i, 1);
+          const m = d.getMonth();
+          const y = d.getFullYear();
+          const total = allExpenses
+            .filter((e) => {
+              const ed = e.createdAt?.toDate?.() ?? (e.expenseDate ? new Date(e.expenseDate) : null);
+              return ed && ed.getMonth() === m && ed.getFullYear() === y;
+            })
+            .reduce((sum, e) => sum + (e.amount || 0), 0);
+          expensesByMonth.push({ month: MONTH_LABELS[m], amount: total });
+        }
 
-      setLoading(false);
+        // ── Events
+        const eventsSnap = await getDocs(collection(db, "boys_events"));
+        const allEvents = eventsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const upcoming = allEvents
+          .filter((e) => e.status === "upcoming")
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        setUpcomingEvents(upcoming.slice(0, 3).map((e) => ({
+          id: e.id,
+          title: e.title,
+          date: e.date,
+          venue: e.venue,
+        })));
+
+        // ── Set stats
+        setStats({
+          totalStudents: allStudents.length,
+          activeStudents: activeStudents.length,
+          inactiveStudents: inactiveStudents.length,
+          monthlyExpenses,
+          upcomingEvents: upcoming.length,
+        });
+
+        setChartData({
+          expensesByMonth,
+          studentStatus: {
+            active: activeStudents.length,
+            inactive: inactiveStudents.length,
+          },
+        });
+
+        // ── Activity logs (derived from recent docs)
+        const receiptsSnap = await getDocs(
+          query(collection(db, "boys_receipts"), orderBy("createdAt", "desc"), limit(3))
+        );
+        const recentReceipts = receiptsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        const logs = [];
+        // Recent students as activity
+        sortedStudents.slice(0, 2).forEach((s) => {
+          logs.push({
+            id: `stu-${s.id}`,
+            action: "student_added",
+            entityName: s.name,
+            adminName: "Admin",
+            timestamp: s.createdAt?.toDate?.() ?? new Date(s.admissionDate ?? Date.now()),
+          });
+        });
+        // Recent receipts as activity
+        recentReceipts.forEach((r) => {
+          logs.push({
+            id: `rcp-${r.id}`,
+            action: "receipt_generated",
+            entityName: r.receiptNumber,
+            adminName: "Admin",
+            timestamp: r.createdAt?.toDate?.() ?? new Date(),
+          });
+        });
+        // Sort by time desc
+        logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        setActivityLogs(logs.slice(0, 5));
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
-  }, []);
+  }, [userProfile]);
 
   if (loading) {
     return (
@@ -311,7 +307,7 @@ export default function DashboardPage() {
           </div>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData?.expensesByMonth || []}>
+              <BarChart data={chartPeriod === "3months" ? (chartData?.expensesByMonth || []).slice(-3) : (chartData?.expensesByMonth || [])}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="#E8DFD4"
@@ -430,8 +426,9 @@ export default function DashboardPage() {
               <tbody>
                 {recentStudents.map((student) => (
                   <tr
-                    key={student.id}
-                    className="border-b border-[#E8DFD4] last:border-0 hover:bg-background"
+                    key={student.docId || student.id}
+                    className="border-b border-[#E8DFD4] last:border-0 hover:bg-background cursor-pointer"
+                    onClick={() => window.location.href = `/${PORTAL}/students/${student.docId || student.id}`}
                   >
                     <td className="py-3">
                       <div className="flex items-center gap-2">

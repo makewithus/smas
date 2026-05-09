@@ -51,7 +51,7 @@ const priorityBadge = {
   low: { bg: "rgba(140,123,107,0.08)", text: "#8C7B6B" },
 };
 
-const emptyForm = { text: "", priority: "medium", enabled: true };
+const emptyForm = { title: "", content: "", priority: "medium", enabled: true };
 
 export default function BoysNoticesPage() {
   const [notices, setNotices] = useState([]);
@@ -97,7 +97,8 @@ export default function BoysNoticesPage() {
   const openEdit = (notice) => {
     setEditingNotice(notice);
     setForm({
-      text: notice.text || "",
+      title: notice.title || notice.text || "",
+      content: notice.content || "",
       priority: notice.priority || "medium",
       enabled: notice.enabled !== false,
     });
@@ -105,25 +106,22 @@ export default function BoysNoticesPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.text.trim()) {
-      toast.error("Notice text is required");
+    if (!form.title.trim()) {
+      toast.error("Notice title is required");
       return;
     }
-    if (form.text.length > 200) {
-      toast.error("Notice must be 200 characters or less");
-      return;
-    }
+    const payload = { ...form, text: form.title };
     try {
       setFormLoading(true);
       if (editingNotice) {
         await updateDoc(doc(db, "boys_notices", editingNotice.id), {
-          ...form,
+          ...payload,
           updatedAt: serverTimestamp(),
         });
         toast.success("Notice updated");
       } else {
         await addDoc(collection(db, "boys_notices"), {
-          ...form,
+          ...payload,
           portal: PORTAL,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -229,15 +227,22 @@ export default function BoysNoticesPage() {
                 }}
               >
                 <div className="flex-1 min-w-0 mr-4">
-                  <span
-                    className="inline-block text-xs font-medium px-2 py-0.5 rounded uppercase"
-                    style={{ background: badge.bg, color: badge.text }}
-                  >
-                    {notice.priority}
-                  </span>
-                  <p className="text-sm mt-1.5" style={{ color: "#3D3227" }}>
-                    {notice.text}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="inline-block text-xs font-medium px-2 py-0.5 rounded uppercase"
+                      style={{ background: badge.bg, color: badge.text }}
+                    >
+                      {notice.priority}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium" style={{ color: "#1B4332" }}>
+                    {notice.title || notice.text}
                   </p>
+                  {notice.content ? (
+                    <p className="text-sm mt-1" style={{ color: "#3D3227" }}>
+                      {notice.content}
+                    </p>
+                  ) : null}
                   <p className="text-xs mt-1.5" style={{ color: "#8C7B6B" }}>
                     Created{" "}
                     {notice.createdAt?.toDate
@@ -310,7 +315,7 @@ export default function BoysNoticesPage() {
                   className="whitespace-nowrap text-white text-xs"
                   style={{ animation: "marquee 20s linear infinite" }}
                 >
-                  {activeNotices.map((n) => n.text).join(" | ")}
+                  {activeNotices.map((n) => n.title || n.text).join(" | ")}
                 </div>
               ) : (
                 <span
@@ -342,22 +347,39 @@ export default function BoysNoticesPage() {
                 className="block text-xs font-medium mb-1"
                 style={{ color: "#3D3227" }}
               >
-                Notice Text <span style={{ color: "#D39542" }}>*</span>
+                Title <span style={{ color: "#D39542" }}>*</span>
+              </label>
+              <input
+                type="text"
+                maxLength={120}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none"
+                style={{ borderColor: "#E8DFD4", color: "#3D3227" }}
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="e.g. Fee Payment Reminder"
+              />
+            </div>
+            <div>
+              <label
+                className="block text-xs font-medium mb-1"
+                style={{ color: "#3D3227" }}
+              >
+                Content
               </label>
               <textarea
                 rows={3}
-                maxLength={200}
+                maxLength={500}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none resize-none"
                 style={{ borderColor: "#E8DFD4", color: "#3D3227" }}
-                value={form.text}
-                onChange={(e) => setForm({ ...form, text: e.target.value })}
-                placeholder="Enter notice text..."
+                value={form.content}
+                onChange={(e) => setForm({ ...form, content: e.target.value })}
+                placeholder="Detailed description of the notice (optional)"
               />
               <div
                 className="text-right text-xs mt-1"
                 style={{ color: "#8C7B6B" }}
               >
-                {form.text.length}/200
+                {form.content.length}/500
               </div>
             </div>
             <div>

@@ -47,27 +47,29 @@ export default function BoysReportsPage() {
   const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
-    if (!userProfile) return;
     fetchData();
-  }, [userProfile?.uid]);
+  }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [studentsSnap, expensesSnap] = await Promise.all([
-        getDocs(
-          query(collection(db, "boys_students"), orderBy("createdAt", "desc")),
-        ),
-        getDocs(
-          query(
-            collection(db, "boys_expenses"),
-            orderBy("expenseDate", "desc"),
-          ),
-        ),
+        getDocs(collection(db, "boys_students")),
+        getDocs(collection(db, "boys_expenses")),
       ]);
-      setStudents(studentsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setExpenses(expensesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } catch {
+      const studs = studentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const exps = expensesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // sort client-side to avoid index requirements
+      studs.sort((a, b) => {
+        const ad = a.createdAt?.toDate?.() ?? new Date(a.admissionDate ?? 0);
+        const bd = b.createdAt?.toDate?.() ?? new Date(b.admissionDate ?? 0);
+        return bd - ad;
+      });
+      exps.sort((a, b) => (b.expenseDate ?? "").localeCompare(a.expenseDate ?? ""));
+      setStudents(studs);
+      setExpenses(exps);
+    } catch (err) {
+      console.error("Reports fetch error:", err);
       toast.error("Failed to load reports");
     } finally {
       setLoading(false);
@@ -135,7 +137,114 @@ export default function BoysReportsPage() {
     .map(([month, amount]) => ({ month, amount }));
 
   const handleExport = () => {
-    toast.info("Export feature requires backend API integration");
+    if (!students.length && !expenses.length) {
+      toast.error("No data loaded yet. Please wait for the page to finish loading.");
+      return;
+    }
+    const label = exportType.charAt(0).toUpperCase() + exportType.slice(1);
+    const timestamp = new Date().toISOString().split("T")[0];
+
+    const toDateStr = (raw) => {
+      if (!raw) return null;
+      if (raw?.toDate) return raw.toDate().toISOString().split("T")[0];
+      if (raw?.seconds) return new Date(raw.seconds * 1000).toISOString().split("T")[0];
+      return String(raw).split("T")[0];
+    };
+
+    const inRange = (dateStr) => {
+      if (!dateFrom && !dateTo) return true;
+      if (!dateStr) return true;
+      if (dateFrom && dateStr < dateFrom) return false;
+      if (dateTo && dateStr > dateTo) return false;
+      return true;
+    };
+
+    const filteredStudents = students;
+    const filteredExpenses = expenses.filter((e) => inRange(e.expenseDate));
+
+    if (exportFormat === "csv") {
+      let csvContent = "";
+      let filename = "";
+
+      if (exportType === "students" || exportType === "combined") {
+        const headers = ["Student ID", "Name", "Class", "Phone", "Parent Name", "Address", "Admission Date", "Status"];
+        const rows = filteredStudents.map((s) => [
+          s.studentId || "",
+          s.name || "",
+          s.class || "",
+          s.phone || "",
+          s.parentName || "",
+          (s.address || "").replace(/,/g, " "),
+          s.admissionDate || "",
+          s.status || "",
+        ]);
+        const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+        if (exportType === "students") { csvContent = csv; filename = `students_report_${timestamp}.csv`; }
+        else { csvContent += "STUDENTS\n" + csv + "\n\n"; }
+      }
+
+      if (exportType === "expenses" || exportType === "combined") {
+        const headers = ["Title", "Category", "Amount (Rs.)", "Payment Method", "Vendor", "Date", "Description"];
+        const rows = filteredExpenses.map((e) => [
+          e.title || "",
+          e.category || "",
+          e.amount || 0,
+          e.paymentMethod || "",
+          (e.vendor || "").replace(/,/g, " "),
+          e.expenseDate || "",
+          (e.description || "").replace(/,/g, " "),
+        ]);
+        const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+        if (exportType === "expenses") { csvContent = csv; filename = `expenses_report_${timestamp}.csv`; }
+        else { csvContent += "EXPENSES\n" + csv; filename = `combined_report_${timestamp}.csv`; }
+      }
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      toast.success(`Downloaded: ${filename} (${exportType === "students" ? filteredStudents.length : filteredExpenses.length} records)`);
+
+    } else {
+      // PDF via print window
+      const totalExpAmt = filteredExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+      const dateRange = dateFrom || dateTo ? `${dateFrom || "—"} to ${dateTo || "—"}` : "All dates";
+
+      const buildTable = (headers, rows) =>
+        `<table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>` +
+        `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+
+      const studentTable = buildTable(
+        ["Student ID", "Name", "Class", "Phone", "Parent Name", "Status", "Admission Date"],
+        filteredStudents.map((s) => [s.studentId||"", s.name||"", s.class||"", s.phone||"", s.parentName||"", s.status||"", s.admissionDate||""])
+      );
+      const expenseTable = buildTable(
+        ["Title", "Category", "Amount (Rs.)", "Payment Method", "Vendor", "Date"],
+        filteredExpenses.map((e) => [e.title||"", e.category||"", `Rs. ${Number(e.amount||0).toLocaleString("en-IN")}`, e.paymentMethod||"", e.vendor||"", e.expenseDate||""])
+      );
+
+      const sections = exportType === "students" ? studentTable
+        : exportType === "expenses" ? expenseTable
+        : studentTable + `<h2 style="margin-top:24px">Expense Report</h2>` + expenseTable;
+
+      const html = `<!DOCTYPE html><html><head><title>Hudaibiyya Arabic College — ${label} Report</title>
+        <style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px;}h1{font-size:20px;margin:0;}h2{font-size:15px;margin:16px 0 8px;color:#1B4332;}.header{text-align:center;border-bottom:2px solid #1B4332;padding-bottom:12px;margin-bottom:16px;}.meta{display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{background:#1B4332;color:#fff;text-align:left;padding:6px 8px;font-size:11px;}td{padding:5px 8px;border-bottom:1px solid #E8DFD4;font-size:11px;}tr:nth-child(even) td{background:#FAF6F1;}.summary{margin-top:12px;font-size:11px;color:#555;}@media print{body{padding:0;}}</style></head><body>
+        <div class="header"><h1>HUDAIBIYYA ARABIC COLLEGE</h1><div style="font-size:11px;color:#555;margin-top:4px">Hudaibiyya Islamic Charitable Trust, Vottancheri &nbsp;|&nbsp; +91 94621 38738</div></div>
+        <div class="meta"><span><strong>${label} Report</strong></span><span>Date Range: ${dateRange}</span><span>Generated: ${new Date().toLocaleDateString("en-IN")}</span></div>
+        ${exportType !== "expenses" ? `<h2>Student Report</h2><div class="summary">Total: ${filteredStudents.length} | Active: ${filteredStudents.filter(s=>s.status==="active").length} | Inactive: ${filteredStudents.filter(s=>s.status!=="active").length}</div>` : ""}
+        ${sections}
+        ${exportType !== "students" ? `<div class="summary"><strong>Total Expenses: Rs. ${totalExpAmt.toLocaleString("en-IN")}</strong></div>` : ""}
+        </body></html>`;
+
+      const win = window.open("", "_blank");
+      if (!win) { toast.error("Pop-up blocked. Please allow pop-ups and try again."); return; }
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => { win.print(); };
+      toast.success(`${label} report opened for printing/saving as PDF`);
+    }
   };
 
   if (loading) {

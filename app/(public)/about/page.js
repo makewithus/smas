@@ -7,7 +7,7 @@ import { INSTITUTION } from '@/src/lib/constants'
 // Page Hero Component
 function PageHero({ title, breadcrumbs }) {
   return (
-    <section className="h-[280px] bg-brand flex flex-col items-center justify-center text-center px-6">
+    <section className="h-70 bg-brand flex flex-col items-center justify-center text-center px-6">
       <h1 className="font-serif text-4xl text-white mb-4">
         {title}
       </h1>
@@ -46,7 +46,7 @@ function MissionVision() {
   
   return (
     <section className="py-16 bg-background">
-      <div className="max-w-[1200px] mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-8">
           {cards.map((card, idx) => {
             const Icon = card.icon
@@ -104,7 +104,7 @@ function Objectives() {
   
   return (
     <section className="py-16 bg-white">
-      <div className="max-w-[1200px] mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-12">
           <h2 className="font-serif text-3xl text-brand">
             Our Objectives
@@ -137,16 +137,16 @@ function Objectives() {
 function InstitutionDetails() {
   const details = [
     { label: 'Established', value: '2005' },
-    { label: 'Location', value: 'City, State - 123456' },
-    { label: 'Type', value: 'Co-Educational Institution' },
-    { label: 'Affiliation', value: 'State Education Board' },
-    { label: 'Principal', value: 'Dr. John Smith' },
+    { label: 'Location', value: 'Vottancheri' },
+    { label: 'Type', value: 'Boys & Girls Arabic College' },
+    { label: 'Run By', value: 'Hudaibiyya Islamic Charitable Trust' },
+    { label: 'Phone', value: '+91 94621 38738' },
     { label: 'Student Strength', value: '500+' },
   ]
   
   return (
     <section className="py-16 bg-surface">
-      <div className="max-w-[800px] mx-auto px-6">
+      <div className="max-w-3xl mx-auto px-6">
         <h2 className="font-serif text-3xl text-brand text-center mb-10">
           Institution Details
         </h2>

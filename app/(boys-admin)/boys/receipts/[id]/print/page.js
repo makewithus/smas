@@ -9,7 +9,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { toast } from "sonner";
 import LoadingSkeleton from "@/src/components/shared/LoadingSkeleton";
 import { formatDate, formatCurrency, numberToWords } from "@/src/lib/utils";
-import { PAYMENT_METHODS } from "@/src/lib/constants";
+import { PAYMENT_METHODS, INSTITUTION } from "@/src/lib/constants";
 import { useAuth } from '@/src/context/AuthContext'
 
 export default function PrintBoysReceiptPage({ params }) {
@@ -60,14 +60,14 @@ export default function PrintBoysReceiptPage({ params }) {
       <div className="print:hidden mb-6 flex items-center justify-between">
         <Link
           href={`/boys/receipts/${id}`}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 border border-[#E8DFD4] rounded-lg hover:bg-[#F5EFE8] text-neutral-700 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </Link>
         <button
           onClick={handlePrint}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
         >
           <Printer className="h-4 w-4" />
           Print Receipt
@@ -75,17 +75,15 @@ export default function PrintBoysReceiptPage({ params }) {
       </div>
 
       {/* Printable Receipt */}
-      <div className="bg-white rounded-xl border border-gray-200 p-8 print:border-none print:rounded-none print:p-0 max-w-3xl mx-auto">
+      <div id="print-content" className="print-area bg-white rounded-xl border border-gray-200 p-8 print:border-none print:rounded-none print:p-6 max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
-            Boys Hostel
+            {INSTITUTION.name}
           </h1>
-          <p className="text-gray-600 mt-1">Student Management System</p>
-          <p className="text-gray-500 text-sm mt-1">
-            123 Education Street, City - 123456
-          </p>
-          <p className="text-gray-500 text-sm">Phone: +91 9876543210</p>
+          <p className="text-gray-600 mt-1">{INSTITUTION.fullName}</p>
+          <p className="text-gray-500 text-sm mt-1">{INSTITUTION.address}</p>
+          <p className="text-gray-500 text-sm">Phone: {INSTITUTION.phone}</p>
         </div>
 
         {/* Receipt Title */}
@@ -197,21 +195,20 @@ export default function PrintBoysReceiptPage({ params }) {
       {/* Print Styles */}
       <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print\\:hidden {
+          nav, aside, header, [data-sidebar], .print\\:hidden {
             display: none !important;
           }
-          #__next > div > div:last-child,
-          #__next > div > div:last-child * {
-            visibility: visible;
+          body {
+            background: white !important;
           }
-          #__next > div > div:last-child {
-            position: absolute;
-            left: 0;
+          .print-area {
+            position: fixed;
             top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: white;
           }
         }
       `}</style>

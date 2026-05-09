@@ -377,8 +377,8 @@ export default function AddGirlStudentPage() {
                 >
                   <option value="">Select class</option>
                   {CLASS_OPTIONS.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
+                    <option key={cls.value} value={cls.value}>
+                      {cls.label}
                     </option>
                   ))}
                 </select>
@@ -408,7 +408,7 @@ export default function AddGirlStudentPage() {
                   <option value="">Select room</option>
                   {ROOMS.map((room) => (
                     <option key={room} value={room}>
-                      Room {room}
+                      {room}
                     </option>
                   ))}
                 </select>
@@ -463,9 +463,9 @@ export default function AddGirlStudentPage() {
                   onChange={handleChange}
                   className={inputClasses()}
                 >
-                  {Object.entries(FEE_TYPES).map(([key, value]) => (
-                    <option key={key} value={key}>
-                      {value}
+                  {FEE_TYPES.map((fee) => (
+                    <option key={fee.value} value={fee.value}>
+                      {fee.label}
                     </option>
                   ))}
                 </select>
@@ -522,9 +522,9 @@ export default function AddGirlStudentPage() {
                   onChange={handleChange}
                   className={inputClasses()}
                 >
-                  {Object.entries(PAYMENT_STATUS).map(([key, value]) => (
-                    <option key={key} value={key}>
-                      {value}
+                  {PAYMENT_STATUS.map((ps) => (
+                    <option key={ps.value} value={ps.value}>
+                      {ps.label}
                     </option>
                   ))}
                 </select>

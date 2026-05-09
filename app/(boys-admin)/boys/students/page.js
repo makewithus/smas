@@ -258,7 +258,7 @@ export default function StudentsPage() {
                     />
                   </th>
                   {["Student ID", "Student", "Phone", "Parent", "Status", "Admitted", "Actions"].map((h) => (
-                    <th key={h} className={`px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-wider ${h === "Actions" ? "text-right" : "text-left"}`}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-neutral-600 uppercase tracking-wider ${h === "Actions" ? "text-right" : "text-left"}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -271,27 +271,27 @@ export default function StudentsPage() {
                     <td className="px-4 py-3">
                       <Checkbox checked={selectedRows.includes(student.id)} onCheckedChange={(c) => handleSelectRow(student.id, c)} />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-neutral-500">{student.studentId || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-neutral-600 font-medium">{student.studentId || "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-brand text-xs font-medium shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#D6EDE1] flex items-center justify-center text-brand text-xs font-bold shrink-0">
                           {getInitials(student.name || "")}
                         </div>
                         <div>
-                          <p className="font-medium text-neutral-900">{student.name}</p>
-                          <p className="text-xs text-neutral-500">{student.class}</p>
+                          <p className="font-semibold text-neutral-900">{student.name}</p>
+                          <p className="text-xs text-neutral-500 font-medium">{student.class}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-neutral-700">{student.phone || "—"}</td>
-                    <td className="px-4 py-3 text-neutral-700">{student.parentName || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-800 text-sm">{student.phone || "—"}</td>
+                    <td className="px-4 py-3 text-neutral-800 text-sm">{student.parentName || "—"}</td>
                     <td className="px-4 py-3"><StatusBadge status={student.status} /></td>
-                    <td className="px-4 py-3 text-neutral-500 text-xs">{formatDate(student.admissionDate)}</td>
+                    <td className="px-4 py-3 text-neutral-700 text-xs font-medium">{formatDate(student.admissionDate)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => router.push(`/${PORTAL}/students/${student.id}`)} className="p-1.5 text-neutral-500 hover:text-brand rounded" title="View"><Eye size={15} /></button>
-                        <button onClick={() => router.push(`/${PORTAL}/students/${student.id}/edit`)} className="p-1.5 text-neutral-500 hover:text-accent rounded" title="Edit"><Pencil size={15} /></button>
-                        <button onClick={() => { setStudentToDelete(student); setDeleteDialogOpen(true); }} className="p-1.5 text-neutral-500 hover:text-red-500 rounded" title="Delete"><Trash2 size={15} /></button>
+                        <button onClick={() => router.push(`/${PORTAL}/students/${student.id}`)} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-brand hover:border-brand hover:bg-[#F0FAF4] transition-colors" title="View"><Eye size={13} /></button>
+                        <button onClick={() => router.push(`/${PORTAL}/students/${student.id}/edit`)} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors" title="Edit"><Pencil size={13} /></button>
+                        <button onClick={() => { setStudentToDelete(student); setDeleteDialogOpen(true); }} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-red-600 hover:border-red-400 hover:bg-red-50 transition-colors" title="Delete"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>

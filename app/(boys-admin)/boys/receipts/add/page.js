@@ -130,163 +130,171 @@ export default function AddReceiptPage() {
       toast.success("Receipt added successfully");
       router.push(`/${PORTAL}/receipts`);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to add receipt");
+      console.error("Receipt add error:", err);
+      toast.error(err?.message || "Failed to add receipt");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="max-w-2xl">
+      {/* Page Header */}
+      <div className="mb-5">
         <Link href={`/${PORTAL}/receipts`}
-          className="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900 mb-2">
-          <ArrowLeft size={16} /> Receipts
+          className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-brand transition-colors mb-3">
+          <ArrowLeft size={13} /> Back to Receipts
         </Link>
-        <h1 className="text-xl font-medium text-neutral-900">Add New Receipt</h1>
-        <p className="text-sm text-neutral-600 mt-0.5">Record a fee payment receipt</p>
+        <h1 className="text-lg font-semibold text-neutral-900">Add New Receipt</h1>
+        <p className="text-xs text-neutral-500 mt-0.5">Record a fee payment for a student</p>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="max-w-2xl space-y-5">
-          {/* Student Selection */}
-          <div className="bg-white border border-[#E8DFD4] rounded-md p-6">
-            <div className="section-header">Select Student</div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Student Selection */}
+        <div className="bg-white border border-[#E8DFD4] rounded-lg p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3">Select Student</p>
+
+          <div className="relative">
             <div className="relative">
-              <label className="label label-required">Student</label>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-                <input
-                  type="text"
-                  value={studentSearch}
-                  onChange={(e) => {
-                    setStudentSearch(e.target.value);
-                    setSelectedStudent(null);
-                    setShowDropdown(true);
-                  }}
-                  onFocus={() => setShowDropdown(true)}
-                  className={`input pl-9 ${errors.student ? "input-error" : ""}`}
-                  placeholder={studentsLoading ? "Loading students…" : "Search by name, ID or class"}
-                  disabled={studentsLoading}
-                />
-              </div>
-              {errors.student && <p className="text-sm text-red-500 mt-1">{errors.student}</p>}
-
-              {showDropdown && (studentSearch.length > 0 || !selectedStudent) && filteredStudents.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-[#E8DFD4] rounded-md shadow-md overflow-hidden">
-                  {filteredStudents.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => handleStudentSelect(s)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#F5EFE8] transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center shrink-0">
-                        <User size={14} className="text-neutral-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-neutral-900">{s.name}</p>
-                        <p className="text-xs text-neutral-500">{s.studentId} · {s.class}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+              <input
+                type="text"
+                value={studentSearch}
+                onChange={(e) => { setStudentSearch(e.target.value); setSelectedStudent(null); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                className={`input pl-8 text-sm ${errors.student ? "input-error" : ""}`}
+                placeholder={studentsLoading ? "Loading students…" : "Search by name, ID or class…"}
+                disabled={studentsLoading}
+              />
             </div>
+            {errors.student && <p className="text-xs text-red-500 mt-1">{errors.student}</p>}
 
-            {selectedStudent && (
-              <div className="mt-3 p-3 bg-[#F5EFE8] rounded border border-[#E8DFD4]">
-                <p className="text-sm font-medium text-neutral-900">{selectedStudent.name}</p>
-                <p className="text-xs text-neutral-600 mt-0.5">
-                  {selectedStudent.studentId} · {selectedStudent.class}
-                  {selectedStudent.phone && ` · ${selectedStudent.phone}`}
-                </p>
+            {showDropdown && filteredStudents.length > 0 && !selectedStudent && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-[#E8DFD4] rounded-lg shadow-lg overflow-hidden">
+                {filteredStudents.map((s) => (
+                  <button key={s.id} type="button" onClick={() => handleStudentSelect(s)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[#F5EFE8] transition-colors border-b border-[#F0E8E0] last:border-0">
+                    <div className="w-7 h-7 rounded-full bg-[#E8F5EE] flex items-center justify-center shrink-0">
+                      <User size={12} className="text-brand" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-neutral-900 leading-tight">{s.name}</p>
+                      <p className="text-[11px] text-neutral-500">{s.studentId} · {s.class}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Fee Details */}
-          <div className="bg-white border border-[#E8DFD4] rounded-md p-6">
-            <div className="section-header">Fee Details</div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="label label-required">Fee Month</label>
-                <Select value={formData.feeMonth} onValueChange={(v) => handleSelect("feeMonth", v)}>
-                  <SelectTrigger className={`w-full h-9.5 ${errors.feeMonth ? "border-red-500" : "border-[#E8DFD4]"}`}>
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
-                    {MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {errors.feeMonth && <p className="text-sm text-red-500 mt-1">{errors.feeMonth}</p>}
+          {selectedStudent && (
+            <div className="mt-2.5 flex items-center gap-2.5 p-2.5 bg-[#F0FAF4] border border-[#C2E0CE] rounded-md">
+              <div className="w-7 h-7 rounded-full bg-brand flex items-center justify-center shrink-0">
+                <User size={12} className="text-white" />
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-neutral-900 leading-tight">{selectedStudent.name}</p>
+                <p className="text-[11px] text-neutral-500 truncate">
+                  {selectedStudent.studentId} · {selectedStudent.class}{selectedStudent.phone ? ` · ${selectedStudent.phone}` : ""}
+                </p>
+              </div>
+              <button type="button" onClick={() => { setSelectedStudent(null); setStudentSearch(""); }}
+                className="text-[11px] text-neutral-400 hover:text-red-500 transition-colors shrink-0">Change</button>
+            </div>
+          )}
+        </div>
 
-              <div>
-                <label className="label label-required">Year</label>
-                <input name="feeYear" value={formData.feeYear} onChange={handleChange}
-                  className={`input ${errors.feeYear ? "input-error" : ""}`} placeholder="2026" />
-                {errors.feeYear && <p className="text-sm text-red-500 mt-1">{errors.feeYear}</p>}
-              </div>
+        {/* Fee Details */}
+        <div className="bg-white border border-[#E8DFD4] rounded-lg p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3">Fee Details</p>
 
-              <div>
-                <label className="label label-required">Amount (Rs.)</label>
-                <input name="amount" type="number" min="0" step="0.01" value={formData.amount}
-                  onChange={handleChange}
-                  className={`input ${errors.amount ? "input-error" : ""}`} placeholder="0.00" />
-                {errors.amount && <p className="text-sm text-red-500 mt-1">{errors.amount}</p>}
-              </div>
-
-              <div>
-                <label className="label label-required">Payment Method</label>
-                <Select value={formData.paymentMethod} onValueChange={(v) => handleSelect("paymentMethod", v)}>
-                  <SelectTrigger className={`w-full h-9.5 ${errors.paymentMethod ? "border-red-500" : "border-[#E8DFD4]"}`}>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
-                    {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {errors.paymentMethod && <p className="text-sm text-red-500 mt-1">{errors.paymentMethod}</p>}
-              </div>
-
-              <div>
-                <label className="label label-required">Payment Date</label>
-                <input type="date" name="paymentDate" value={formData.paymentDate}
-                  onChange={handleChange}
-                  className={`input ${errors.paymentDate ? "input-error" : ""}`} />
-                {errors.paymentDate && <p className="text-sm text-red-500 mt-1">{errors.paymentDate}</p>}
-              </div>
-
-              <div>
-                <label className="label">Status</label>
-                <Select value={formData.status} onValueChange={(v) => handleSelect("status", v)}>
-                  <SelectTrigger className="w-full h-9.5 border-[#E8DFD4]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="partial">Partial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="label">Notes</label>
-                <textarea name="notes" value={formData.notes} onChange={handleChange}
-                  rows={3} className="input h-auto py-2.5 resize-none" placeholder="Additional notes (optional)" />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Fee Month */}
+            <div>
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Fee Month <span className="text-red-500">*</span></label>
+              <Select value={formData.feeMonth} onValueChange={(v) => handleSelect("feeMonth", v)}>
+                <SelectTrigger className={`h-9 text-sm ${errors.feeMonth ? "border-red-500" : "border-[#E8DFD4]"}`}>
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  {MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {errors.feeMonth && <p className="text-xs text-red-500 mt-1">{errors.feeMonth}</p>}
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-5 border-t border-[#E8DFD4]">
-              <Link href={`/${PORTAL}/receipts`} className="btn-ghost">Cancel</Link>
-              <button type="submit" disabled={loading} className="btn-primary">
-                {loading ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Save size={15} /> Save Receipt</>}
-              </button>
+            {/* Year */}
+            <div>
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Year <span className="text-red-500">*</span></label>
+              <input name="feeYear" value={formData.feeYear} onChange={handleChange}
+                className={`input h-9 text-sm ${errors.feeYear ? "input-error" : ""}`} placeholder="2026" />
+              {errors.feeYear && <p className="text-xs text-red-500 mt-1">{errors.feeYear}</p>}
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Amount (Rs.) <span className="text-red-500">*</span></label>
+              <input name="amount" type="number" min="0" step="0.01" value={formData.amount} onChange={handleChange}
+                className={`input h-9 text-sm ${errors.amount ? "input-error" : ""}`} placeholder="0.00" />
+              {errors.amount && <p className="text-xs text-red-500 mt-1">{errors.amount}</p>}
+            </div>
+
+            {/* Payment Method */}
+            <div>
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Payment Method <span className="text-red-500">*</span></label>
+              <Select value={formData.paymentMethod} onValueChange={(v) => handleSelect("paymentMethod", v)}>
+                <SelectTrigger className={`h-9 text-sm ${errors.paymentMethod ? "border-red-500" : "border-[#E8DFD4]"}`}>
+                  <SelectValue placeholder="Method" />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {errors.paymentMethod && <p className="text-xs text-red-500 mt-1">{errors.paymentMethod}</p>}
+            </div>
+
+            {/* Payment Date */}
+            <div>
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Payment Date <span className="text-red-500">*</span></label>
+              <input type="date" name="paymentDate" value={formData.paymentDate} onChange={handleChange}
+                className={`input h-9 text-sm ${errors.paymentDate ? "input-error" : ""}`} />
+              {errors.paymentDate && <p className="text-xs text-red-500 mt-1">{errors.paymentDate}</p>}
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Status</label>
+              <Select value={formData.status} onValueChange={(v) => handleSelect("status", v)}>
+                <SelectTrigger className="h-9 text-sm border-[#E8DFD4]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-neutral-700 mb-1 block">Notes</label>
+              <textarea name="notes" value={formData.notes} onChange={handleChange} rows={2}
+                className="input text-sm h-auto py-2 resize-none" placeholder="Additional notes (optional)" />
             </div>
           </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-2 pb-2">
+          <Link href={`/${PORTAL}/receipts`}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-neutral-600 bg-white border border-[#E8DFD4] rounded-md hover:bg-[#F5EFE8] transition-colors">
+            Cancel
+          </Link>
+          <button type="submit" disabled={loading}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-brand rounded-md hover:bg-brand/90 transition-colors disabled:opacity-60">
+            {loading ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save Receipt</>}
+          </button>
         </div>
       </form>
     </div>

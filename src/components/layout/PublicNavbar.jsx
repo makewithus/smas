@@ -24,7 +24,7 @@ export default function PublicNavbar() {
   
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E8DFD4]">
-      <nav className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand rounded flex items-center justify-center">
@@ -35,7 +35,7 @@ export default function PublicNavbar() {
               {INSTITUTION.name}
             </span>
             <span className="text-xs text-neutral-600 leading-tight">
-              Administration System
+              Vottancheri
             </span>
           </div>
         </Link>
