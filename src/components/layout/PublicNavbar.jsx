@@ -24,7 +24,7 @@ export default function PublicNavbar() {
   
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E8DFD4]">
-      <nav className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between relative">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand rounded flex items-center justify-center">
@@ -39,9 +39,9 @@ export default function PublicNavbar() {
             </span>
           </div>
         </Link>
-        
+
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center justify-center gap-8 absolute left-1/2 -translate-x-1/2">
           {navLinks.map(({ href, label }) => {
             const isActive = pathname === href || (href !== '/' && pathname.startsWith(href))
             return (
@@ -49,8 +49,8 @@ export default function PublicNavbar() {
                 key={href}
                 href={href}
                 className={`text-base transition-colors relative pb-0.5 ${
-                  isActive 
-                    ? 'text-brand' 
+                  isActive
+                    ? 'text-brand font-medium'
                     : 'text-neutral-900 hover:text-brand'
                 }`}
               >
@@ -62,23 +62,25 @@ export default function PublicNavbar() {
             )
           })}
         </div>
-        
-        {/* Desktop Admin Login Button */}
-        <Link
-          href="/login"
-          className="hidden md:inline-flex btn-primary"
-        >
-          Admin Login
-        </Link>
-        
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden p-2 text-neutral-900 hover:text-brand"
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+
+        {/* Right Side */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/login"
+            className="hidden md:inline-flex btn-primary"
+          >
+            Admin Login
+          </Link>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 text-neutral-900 hover:text-brand"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </nav>
       
       {/* Mobile Menu */}

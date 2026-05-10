@@ -26,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
 
 const iconMap = {
   LayoutDashboard,
@@ -55,6 +56,7 @@ export default function AdminLayout({ children, portal }) {
   const { user, userProfile, signOut, loading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileTimeout, setProfileTimeout] = useState(false);
+  const [signOutDialogOpen, setSignOutDialogOpen] = useState(false);
 
   // Safety valve: if user exists but profile never arrives within 4s, render anyway
   useEffect(() => {
@@ -79,6 +81,10 @@ export default function AdminLayout({ children, portal }) {
 
   // Handle sign out
   const handleSignOut = async () => {
+    setSignOutDialogOpen(true);
+  };
+
+  const confirmSignOut = async () => {
     try {
       await signOut();
     } catch (error) {
@@ -276,6 +282,16 @@ export default function AdminLayout({ children, portal }) {
           {children}
         </main>
       </div>
+
+      <ConfirmDialog
+        open={signOutDialogOpen}
+        onOpenChange={setSignOutDialogOpen}
+        onConfirm={confirmSignOut}
+        title="Sign out?"
+        description="You will be signed out of the admin portal."
+        confirmLabel="Sign Out"
+        variant="warning"
+      />
     </div>
   );
 }

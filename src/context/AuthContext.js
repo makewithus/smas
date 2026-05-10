@@ -12,6 +12,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/src/lib/firebase";
@@ -107,7 +108,13 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(
     async (email, password, selectedPortal) => {
       try {
-        const result = await signInWithEmailAndPassword(auth, email, password);
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedPassword = password.trim();
+        const result = await signInWithEmailAndPassword(
+          auth,
+          normalizedEmail,
+          normalizedPassword,
+        );
         const firebaseUser = result.user;
 
         const profile = await fetchUserProfile(firebaseUser.uid);
@@ -145,6 +152,30 @@ export function AuthProvider({ children }) {
 
         return { user: firebaseUser, profile, portal: selectedPortal };
       } catch (error) {
+        if (error?.code === "auth/invalid-credential") {
+          try {
+            const normalizedEmail = email.trim().toLowerCase();
+            const methods = await fetchSignInMethodsForEmail(
+              auth,
+              normalizedEmail,
+            );
+            if (methods.length === 0) {
+              throw new Error(
+                "Unable to verify sign-in methods for this email (Firebase returned none). This can happen if Email Enumeration Protection is enabled, or if the app is connected to a different Firebase project than the one you’re checking. Try 'Forgot password' to reset the password, or have an admin delete and recreate the user (via /setup).",
+              );
+            }
+            if (!methods.includes("password")) {
+              throw new Error(
+                "This account does not use Email/Password sign-in. Contact the administrator.",
+              );
+            }
+            throw new Error(
+              "Incorrect password for this account. If you previously ran /setup, the password may be different — reset it in Firebase Console or delete the user and re-run /setup.",
+            );
+          } catch (e2) {
+            if (e2 instanceof Error) throw e2;
+          }
+        }
         const message =
           FIREBASE_ERROR_MESSAGES[error.code] ||
           error.message ||

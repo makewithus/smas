@@ -41,9 +41,13 @@ service cloud.firestore {
     // ─── Users ───────────────────────────────────────────────────────────────────
 
     match /users/{uid} {
-      // Own profile readable and writable by self (needed by /setup to fix profile data)
-      allow read, create, update: if isSignedIn() && request.auth.uid == uid;
-      // Super admin can read/write all profiles
+      // Users can read their own profile (needed for role checks in the app).
+      // IMPORTANT: Do not allow users to write their own profile in production,
+      // otherwise they can self-assign `role: 'super_admin'` and `active: true`.
+      // Create/update profiles using a trusted backend (e.g., Firebase Admin SDK).
+      allow read: if isSignedIn() && request.auth.uid == uid;
+
+      // Super admin can manage all profiles
       allow read, write: if isSuperAdmin();
     }
 
@@ -68,7 +72,9 @@ service cloud.firestore {
     }
 
     match /boys_notices/{docId} {
-      allow read: if resource.data.isPublic == true || isBoysAdmin();
+      // Public site reads enabled notices (homepage marquee).
+      // Older/newer docs may not have isPublic; enabled is the source of truth.
+      allow read: if resource.data.enabled == true || resource.data.isPublic == true || isBoysAdmin();
       allow write: if isBoysAdmin();
     }
 
@@ -93,7 +99,7 @@ service cloud.firestore {
     }
 
     match /girls_notices/{docId} {
-      allow read: if resource.data.isPublic == true || isGirlsAdmin();
+      allow read: if resource.data.enabled == true || resource.data.isPublic == true || isGirlsAdmin();
       allow write: if isGirlsAdmin();
     }
 

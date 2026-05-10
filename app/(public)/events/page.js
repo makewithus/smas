@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, MapPin, Calendar } from "lucide-react";
 import { formatDate } from "@/src/lib/utils";
+import { db } from "@/src/lib/firebase";
+import { collection, query, where, limit, getDocs } from "firebase/firestore";
 import StatusBadge from "@/src/components/shared/StatusBadge";
 import EmptyState from "@/src/components/shared/EmptyState";
 
@@ -140,67 +142,72 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
 
-  useEffect(() => {
-    // Simulated events data
-    const mockEvents = [
-      {
-        id: "1",
-        title: "Annual Sports Day",
-        description:
-          "Join us for the annual sports competition featuring track events, team sports, and more. Students from all classes will participate in various athletic activities.",
-        date: "2024-03-15",
-        venue: "Main Ground",
-        status: "upcoming",
-      },
-      {
-        id: "2",
-        title: "Science Exhibition",
-        description:
-          "Students showcase their innovative science projects and experiments. Judges will evaluate projects based on creativity, scientific method, and presentation.",
-        date: "2024-03-20",
-        venue: "Science Block",
-        status: "upcoming",
-      },
-      {
-        id: "3",
-        title: "Cultural Festival",
-        description:
-          "A celebration of art, music, dance, and cultural performances by students. Multiple stages will feature diverse performances throughout the day.",
-        date: "2024-03-25",
-        venue: "Auditorium",
-        status: "upcoming",
-      },
-      {
-        id: "4",
-        title: "Parent-Teacher Meeting",
-        description:
-          "Quarterly meeting for parents to discuss student progress with teachers and receive academic updates.",
-        date: "2024-02-15",
-        venue: "Classrooms",
-        status: "completed",
-      },
-      {
-        id: "5",
-        title: "Career Guidance Workshop",
-        description:
-          "Industry experts will guide students on career options and higher education pathways.",
-        date: "2024-03-10",
-        venue: "Conference Hall",
-        status: "ongoing",
-      },
-      {
-        id: "6",
-        title: "Art Competition",
-        description:
-          "Annual art competition for students to showcase their artistic talents in various mediums.",
-        date: "2024-02-28",
-        venue: "Art Room",
-        status: "completed",
-      },
-    ];
+  const toIsoDateKey = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") {
+      const m = value.match(/^\d{4}-\d{2}-\d{2}/);
+      if (m) return m[0];
+    }
+    let date;
+    if (value?.toDate) date = value.toDate();
+    else if (value?.seconds) date = new Date(value.seconds * 1000);
+    else date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  };
 
-    setEvents(mockEvents);
-    setLoading(false);
+  const computeStatus = (dateKey) => {
+    if (!dateKey) return "upcoming";
+    const todayKey = new Date().toISOString().slice(0, 10);
+    if (dateKey === todayKey) return "ongoing";
+    return dateKey > todayKey ? "upcoming" : "completed";
+  };
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const load = async (collectionName) => {
+          const q = query(
+            collection(db, collectionName),
+            where("isPublic", "==", true),
+            limit(200),
+          );
+          const snap = await getDocs(q);
+          return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        };
+
+        const [boys, girls] = await Promise.all([
+          load("boys_events"),
+          load("girls_events"),
+        ]);
+
+        const merged = [...boys, ...girls]
+          .filter((e) => e.isPublic)
+          .map((e) => {
+            const rawDate = e.eventDate || e.date;
+            const dateKey = toIsoDateKey(rawDate);
+            return {
+              id: e.id,
+              title: e.title || "Event",
+              description: e.description || "",
+              date: rawDate,
+              venue: e.venue || "TBA",
+              status: computeStatus(dateKey),
+              __dateKey: dateKey,
+            };
+          })
+          .sort((a, b) => (a.__dateKey || "").localeCompare(b.__dateKey || ""));
+
+        setEvents(merged.map(({ __dateKey, ...rest }) => rest));
+      } catch (e) {
+        console.error("Failed to load public events", e);
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
   }, []);
 
   // Filter events based on active filter

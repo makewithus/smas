@@ -255,14 +255,33 @@ function NoticeTicker() {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const q = query(
-          collection(db, "boys_notices"),
-          where("enabled", "==", true),
-          orderBy("createdAt", "desc"),
-          limit(10)
+        const loadNotices = async (collectionName) => {
+          const q = query(
+            collection(db, collectionName),
+            orderBy("createdAt", "desc"),
+            limit(20)
+          );
+          const snap = await getDocs(q);
+          return snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((n) => n.enabled === true);
+        };
+
+        const [boys, girls] = await Promise.all([
+          loadNotices("boys_notices"),
+          loadNotices("girls_notices"),
+        ]);
+
+        const getMillis = (ts) =>
+          ts?.toMillis ? ts.toMillis() : ts?.seconds ? ts.seconds * 1000 : 0;
+
+        const merged = [...boys, ...girls].sort(
+          (a, b) => getMillis(b.createdAt) - getMillis(a.createdAt)
         );
-        const snap = await getDocs(q);
-        const texts = snap.docs.map((d) => d.data().text).filter(Boolean);
+        const texts = merged
+          .map((n) => n.title || n.text || n.content)
+          .filter(Boolean);
+
         if (texts.length > 0) setNotices(texts);
       } catch {
         // fallback to defaults
@@ -347,20 +366,54 @@ function EventsSection() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const toIsoDateKey = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") {
+      const m = value.match(/^\d{4}-\d{2}-\d{2}/);
+      if (m) return m[0];
+    }
+    let date;
+    if (value?.toDate) date = value.toDate();
+    else if (value?.seconds) date = new Date(value.seconds * 1000);
+    else date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  };
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        // Try boys_events and girls_events for public events
-        const q = query(
-          collection(db, "boys_events"),
-          where("isPublic", "==", true),
-          orderBy("date", "desc"),
-          limit(3)
-        );
-        const snap = await getDocs(q);
-        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const loadEvents = async (collectionName) => {
+          const q = query(
+            collection(db, collectionName),
+            where("isPublic", "==", true),
+            // Avoid composite-index requirement by sorting client-side.
+            limit(50)
+          );
+          const snap = await getDocs(q);
+          return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        };
+
+        const [boys, girls] = await Promise.all([
+          loadEvents("boys_events"),
+          loadEvents("girls_events"),
+        ]);
+
+        const todayKey = new Date().toISOString().slice(0, 10);
+
+        const merged = [...boys, ...girls]
+          .filter((e) => e.isPublic)
+          .map((e) => ({
+            ...e,
+            __dateKey: toIsoDateKey(e.eventDate || e.date),
+          }))
+          .filter((e) => e.__dateKey && e.__dateKey >= todayKey)
+          .sort((a, b) => a.__dateKey.localeCompare(b.__dateKey))
+          .slice(0, 3);
+
+        const items = merged;
         if (items.length > 0) {
-          setEvents(items);
+          setEvents(items.map(({ __dateKey, ...rest }) => rest));
         } else {
           // fallback placeholder
           setEvents([]);
@@ -420,7 +473,7 @@ function EventsSection() {
                     }}
                   />
                   <span className="absolute top-3 left-3 bg-brand text-white text-xs px-2 py-1 rounded">
-                    {formatDate(event.date)}
+                    {formatDate(event.eventDate || event.date)}
                   </span>
                 </div>
 

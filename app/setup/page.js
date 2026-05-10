@@ -7,6 +7,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  fetchSignInMethodsForEmail,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import {
   getFirestore,
@@ -403,6 +405,7 @@ export default function SetupPage() {
     setRunning(true);
     setLogs([]);
     const { auth, db } = getFirebaseInstances();
+    let successCount = 0;
 
     for (const u of ACCOUNTS) {
       let uid;
@@ -413,19 +416,74 @@ export default function SetupPage() {
           u.password,
         );
         uid = cred.user.uid;
+        try {
+          await cred.user.getIdToken(true);
+          await new Promise((r) => setTimeout(r, 500));
+        } catch (_) {}
         addLog(`✓ Created Auth account: ${u.email}`, "success");
       } catch (err) {
+        if (err.code === "auth/operation-not-allowed") {
+          addLog(
+            `✗ ${u.email}: Email/Password sign-in is disabled for this Firebase project (auth/operation-not-allowed). Enable Authentication → Sign-in method → Email/Password in Firebase Console.`,
+            "error",
+          );
+          continue;
+        }
         if (err.code === "auth/email-already-in-use") {
           try {
+            const methods = await fetchSignInMethodsForEmail(auth, u.email);
+            if (methods.length === 0) {
+              addLog(
+                `✗ ${u.email}: This email already exists in Firebase Auth, but Firebase returned no sign-in methods. This commonly happens when Email Enumeration Protection is enabled (methods are hidden). Fastest fix: delete this user in Firebase Console → Authentication → Users, then re-run setup to recreate it as an Email/Password account.`,
+                "error",
+              );
+              continue;
+            }
+            if (!methods.includes("password")) {
+              addLog(
+                `✗ ${u.email}: This user exists but does NOT use Email/Password sign-in (methods: ${methods.join(
+                  ", ",
+                )}). Delete this user in Firebase Console → Authentication → Users, then re-run setup (or sign in with the listed provider and link a password).`,
+                "error",
+              );
+              continue;
+            }
             const cred = await signInWithEmailAndPassword(
               auth,
               u.email,
               u.password,
             );
             uid = cred.user.uid;
+            try {
+              await cred.user.getIdToken(true);
+              await new Promise((r) => setTimeout(r, 500));
+            } catch (_) {}
             addLog(`ℹ Auth account already exists: ${u.email}`, "warn");
           } catch (e2) {
-            addLog(`✗ Failed to sign in ${u.email}: ${e2.message}`, "error");
+            if (
+              e2.code === "auth/invalid-credential" ||
+              e2.code === "auth/wrong-password"
+            ) {
+              try {
+                await sendPasswordResetEmail(auth, u.email);
+                addLog(
+                  `✗ ${u.email}: Password mismatch. Password reset email sent. If you don't receive it, delete this user in Firebase Console → Authentication → Users, then re-run setup.`,
+                  "error",
+                );
+              } catch (resetErr) {
+                addLog(
+                  `✗ ${u.email}: Password mismatch and reset failed: ${resetErr.message}`,
+                  "error",
+                );
+              }
+            } else if (e2.code === "auth/operation-not-allowed") {
+              addLog(
+                `✗ ${u.email}: Email/Password sign-in is disabled for this Firebase project (auth/operation-not-allowed). Enable it in Firebase Console.`,
+                "error",
+              );
+            } else {
+              addLog(`✗ Failed to sign in ${u.email}: ${e2.message}`, "error");
+            }
             continue;
           }
         } else {
@@ -449,6 +507,7 @@ export default function SetupPage() {
           `✓ Firestore profile set for: ${u.email} (uid: ${uid.slice(0, 8)}…)`,
           "success",
         );
+        successCount += 1;
       } catch (err) {
         addLog(`✗ Firestore error for ${u.email}: ${err.message}`, "error");
       }
@@ -465,7 +524,7 @@ export default function SetupPage() {
       "✓ Signed out — auth state is clean. Log in fresh from /login.",
       "success",
     );
-    setDone(true);
+    setDone(successCount === ACCOUNTS.length);
     setRunning(false);
   };
 
@@ -606,6 +665,39 @@ export default function SetupPage() {
         <p style={{ fontSize: "13px", color: "#8C7B6B", marginBottom: "24px" }}>
           Run steps in order. Each step is safe to re-run.
         </p>
+
+        {/* Connected Firebase project */}
+        <div
+          style={{
+            background: "#F5EFE8",
+            borderRadius: "6px",
+            padding: "12px 16px",
+            marginBottom: "16px",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            color: "#3D3227",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: "6px" }}>
+            Connected Firebase project
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "110px 1fr",
+              gap: "2px 8px",
+            }}
+          >
+            <span style={{ color: "#8C7B6B" }}>projectId</span>
+            <span>{firebaseConfig.projectId || "(missing)"}</span>
+            <span style={{ color: "#8C7B6B" }}>authDomain</span>
+            <span>{firebaseConfig.authDomain || "(missing)"}</span>
+          </div>
+          <div style={{ marginTop: "6px", color: "#8C7B6B" }}>
+            If this doesn’t match your Firebase Console project, update your
+            NEXT_PUBLIC_FIREBASE_* env vars.
+          </div>
+        </div>
 
         {/* Credentials info box */}
         <div

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { INSTITUTION } from "@/src/lib/constants";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "@/src/lib/firebase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +18,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -30,14 +34,18 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
 
     // Validation
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       setError("Please enter your email");
       return;
     }
 
-    if (!password.trim()) {
+    if (!normalizedPassword) {
       setError("Please enter your password");
       return;
     }
@@ -45,11 +53,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(email, password, selectedPortal);
+      await signIn(normalizedEmail, normalizedPassword, selectedPortal);
 
       // Store remember me preference
       if (rememberMe) {
-        localStorage.setItem("rememberEmail", email);
+        localStorage.setItem("rememberEmail", normalizedEmail);
       } else {
         localStorage.removeItem("rememberEmail");
       }
@@ -60,6 +68,27 @@ export default function LoginPage() {
       setError(err.message || "Failed to sign in. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setError("");
+    setInfo("");
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("Enter your email first, then click Forgot password");
+      return;
+    }
+    try {
+      setResetLoading(true);
+      await sendPasswordResetEmail(auth, normalizedEmail);
+      setInfo(
+        "Password reset email sent. Reset your password, then try signing in again.",
+      );
+    } catch (err) {
+      setError(err?.message || "Failed to send reset email. Please try again.");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -158,6 +187,16 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={loading || resetLoading}
+                  className="text-xs text-brand hover:underline disabled:opacity-50"
+                >
+                  {resetLoading ? "Sending reset email…" : "Forgot password?"}
+                </button>
+              </div>
             </div>
 
             {/* Remember Me */}
@@ -198,6 +237,13 @@ export default function LoginPage() {
                   className="text-red-500 shrink-0 mt-0.5"
                 />
                 <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            {/* Info Alert */}
+            {info && (
+              <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm text-green-700">{info}</p>
               </div>
             )}
           </form>

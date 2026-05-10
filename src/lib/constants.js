@@ -95,6 +95,8 @@ export const FIREBASE_ERROR_MESSAGES = {
   "auth/user-disabled": "This account has been disabled",
   "auth/invalid-credential":
     "Invalid credentials. Please check your email and password",
+  "auth/operation-not-allowed":
+    "Email/Password sign-in is disabled. Enable it in Firebase Console",
 };
 
 // Institution Info (can be customized)

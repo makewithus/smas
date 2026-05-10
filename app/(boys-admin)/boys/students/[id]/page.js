@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { toast } from "sonner";
 import StatusBadge from "@/src/components/shared/StatusBadge";
+import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
 
 const COLLECTION = "boys_students";
 const PORTAL = "boys";
@@ -24,7 +25,7 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -73,6 +74,8 @@ export default function StudentDetailPage() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete student");
+      throw err;
+    } finally {
       setDeleting(false);
     }
   };
@@ -108,24 +111,25 @@ export default function StudentDetailPage() {
             <Link href={`/${PORTAL}/students/${id}/edit`} className="btn-secondary inline-flex items-center gap-1.5 text-sm">
               <Edit size={15} /> Edit
             </Link>
-            {!confirmDelete ? (
-              <button onClick={() => setConfirmDelete(true)}
-                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
-                <Trash2 size={15} /> Delete
-              </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-700">Confirm?</span>
-                <button onClick={handleDelete} disabled={deleting}
-                  className="text-sm px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 transition-colors">
-                  {deleting ? <Loader2 size={15} className="animate-spin" /> : "Yes, Delete"}
-                </button>
-                <button onClick={() => setConfirmDelete(false)} className="btn-ghost text-sm">Cancel</button>
-              </div>
-            )}
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 size={15} /> Delete
+            </button>
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title="Delete Student"
+        description="Delete this student? This cannot be undone."
+        confirmLabel={deleting ? "Deleting…" : "Delete"}
+        variant="danger"
+      />
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* Info Card */}

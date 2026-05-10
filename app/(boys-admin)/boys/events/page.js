@@ -159,7 +159,7 @@ const emptyForm = {
   eventDate: "",
   venue: "",
   status: "upcoming",
-  isPublic: false,
+  isPublic: true,
   posterUrl: "",
 };
 
@@ -213,7 +213,7 @@ export default function BoysEventsPage() {
     setForm({
       title: event.title || "",
       description: event.description || "",
-      eventDate: event.eventDate || "",
+      eventDate: event.eventDate || event.date || "",
       venue: event.venue || "",
       status: event.status || "upcoming",
       isPublic: event.isPublic || false,
@@ -242,37 +242,42 @@ export default function BoysEventsPage() {
     }
     try {
       setFormLoading(true);
+
       let posterUrl = form.posterUrl;
       if (posterFile) {
         const eventId = editingEvent ? editingEvent.id : `evt_${Date.now()}`;
+        const ext = posterFile.name ? posterFile.name.split(".").pop() : "jpg";
         const storageRef = ref(
           storage,
-          `events/${eventId}/poster.${posterFile.name.split(".").pop()}`,
+          `events/${eventId}/poster.${ext}`,
         );
         await uploadBytes(storageRef, posterFile);
         posterUrl = await getDownloadURL(storageRef);
       }
+      const payload = {
+        ...form,
+        date: form.eventDate,
+        posterUrl,
+        updatedAt: new Date().toISOString(),
+      };
+
       if (editingEvent) {
         await updateDoc(doc(db, "boys_events", editingEvent.id), {
-          ...form,
-          posterUrl,
-          updatedAt: serverTimestamp(),
+          ...payload,
         });
         toast.success("Event updated");
       } else {
         await addDoc(collection(db, "boys_events"), {
-          ...form,
-          posterUrl,
+          ...payload,
           portal: PORTAL,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          createdAt: new Date().toISOString(),
         });
         toast.success("Event added");
       }
       setDialogOpen(false);
       fetchEvents();
-    } catch {
-      toast.error("Failed to save event");
+    } catch (err) {
+      toast.error(err?.message || "Failed to save event");
     } finally {
       setFormLoading(false);
     }
@@ -307,7 +312,7 @@ export default function BoysEventsPage() {
     try {
       await updateDoc(doc(db, "boys_events", event.id), {
         isPublic: newValue,
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date().toISOString(),
       });
       toast.success(
         newValue ? "Event is now public" : "Event hidden from public site",

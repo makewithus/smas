@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { db } from "@/src/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 // Keyword → relevant Unsplash photo (education/hostel theme)
 const _FALLBACK_PHOTO = "photo-1571260899304-425eee4c7efc";
@@ -106,54 +108,76 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const toIsoDateKey = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") {
+      const m = value.match(/^\d{4}-\d{2}-\d{2}/);
+      if (m) return m[0];
+    }
+    let date;
+    if (value?.toDate) date = value.toDate();
+    else if (value?.seconds) date = new Date(value.seconds * 1000);
+    else date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  };
+
+  const computeStatus = (dateKey) => {
+    if (!dateKey) return "upcoming";
+    const todayKey = new Date().toISOString().slice(0, 10);
+    if (dateKey === todayKey) return "ongoing";
+    return dateKey > todayKey ? "upcoming" : "completed";
+  };
+
   useEffect(() => {
-    // Simulated event data fetch
-    const mockEvents = {
-      1: {
-        id: "1",
-        title: "Annual Sports Day",
-        description:
-          "Join us for the annual sports competition featuring track events, team sports, and more. Students from all classes will participate in various athletic activities including running, jumping, throwing, and team sports like football and basketball.",
-        fullDescription:
-          "The Annual Sports Day is one of our most anticipated events of the year. This full-day event brings together students, teachers, and parents for a celebration of athletic achievement and school spirit.\n\nActivities include:\n- 100m, 200m, and 400m races\n- Long jump and high jump\n- Shot put and discus throw\n- Relay races\n- Football and basketball matches\n- Fun games for younger students\n\nAll students are encouraged to participate and showcase their athletic abilities. Parents are welcome to attend and cheer for their children.",
-        date: "2024-03-15",
-        time: "9:00 AM - 5:00 PM",
-        venue: "Main Ground",
-        organizer: "Sports Department",
-        expectedAttendees: "500+",
-        status: "upcoming",
-      },
-      2: {
-        id: "2",
-        title: "Science Exhibition",
-        description:
-          "Students showcase their innovative science projects and experiments. Judges will evaluate projects based on creativity, scientific method, and presentation.",
-        fullDescription:
-          "The annual Science Exhibition provides students with an opportunity to apply classroom learning to real-world problems through creative and innovative projects.\n\nCategories include:\n- Physics\n- Chemistry\n- Biology\n- Environmental Science\n- Technology & Innovation\n\nProjects will be judged by a panel of scientists and educators. Winners will receive certificates and prizes.",
-        date: "2024-03-20",
-        time: "10:00 AM - 4:00 PM",
-        venue: "Science Block",
-        organizer: "Science Department",
-        expectedAttendees: "300+",
-        status: "upcoming",
-      },
+    const fetchEvent = async () => {
+      try {
+        const id = String(params.slug || "");
+        if (!id) {
+          setEvent(null);
+          return;
+        }
+
+        const tryGet = async (collectionName) => {
+          const ref = doc(db, collectionName, id);
+          const snap = await getDoc(ref);
+          if (!snap.exists()) return null;
+          return { id: snap.id, ...snap.data() };
+        };
+
+        const fromBoys = await tryGet("boys_events");
+        const fromGirls = fromBoys ? null : await tryGet("girls_events");
+        const found = fromBoys || fromGirls;
+
+        if (!found) {
+          setEvent(null);
+          return;
+        }
+
+        const rawDate = found.eventDate || found.date;
+        const dateKey = toIsoDateKey(rawDate);
+
+        setEvent({
+          id: found.id,
+          title: found.title || "Event",
+          description: found.description || "",
+          fullDescription: found.fullDescription || found.description || "",
+          date: rawDate,
+          time: found.time || "TBA",
+          venue: found.venue || "TBA",
+          organizer: found.organizer || "Administration",
+          expectedAttendees: found.expectedAttendees || "TBA",
+          status: computeStatus(dateKey),
+        });
+      } catch (e) {
+        console.error("Failed to load event detail", e);
+        setEvent(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const eventData = mockEvents[params.slug] || {
-      id: params.slug,
-      title: "Event Details",
-      description: "Event information will be displayed here.",
-      fullDescription: "Detailed event information is currently unavailable.",
-      date: new Date().toISOString(),
-      time: "TBA",
-      venue: "TBA",
-      organizer: "Administration",
-      expectedAttendees: "TBA",
-      status: "upcoming",
-    };
-
-    setEvent(eventData);
-    setLoading(false);
+    fetchEvent();
   }, [params.slug]);
 
   if (loading) {
