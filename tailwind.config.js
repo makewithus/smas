@@ -9,6 +9,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: {
+        50: "12.5rem", // 200px
+        55: "13.75rem", // 220px
+        75: "18.75rem", // 300px
+        100: "25rem", // 400px
+        300: "75rem", // 1200px (max-w-300)
+      },
       colors: {
         // Brand
         brand: {

@@ -2,105 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CalendarPlus, Pencil, Trash2, Calendar, MapPin } from "lucide-react";
-
-// Keyword → relevant Unsplash photo (education/hostel theme)
-const _FALLBACK_IMG =
-  "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=600&h=200&q=80";
-const _onImgErr = (e) => {
-  e.currentTarget.onerror = null;
-  e.currentTarget.src = _FALLBACK_IMG;
-};
-const _EVENT_KW = [
-  {
-    kw: [
-      "sport",
-      "cricket",
-      "football",
-      "athletics",
-      "game",
-      "tournament",
-      "run",
-      "race",
-      "ground",
-    ],
-    photo: "photo-1461896836934-ffe607ba8211",
-  },
-  {
-    kw: [
-      "science",
-      "exhibition",
-      "experiment",
-      "project",
-      "lab",
-      "tech",
-      "robot",
-    ],
-    photo: "photo-1544717302-de2939b7ef71",
-  },
-  {
-    kw: [
-      "quran",
-      "islamic",
-      "recitation",
-      "mosque",
-      "nasheed",
-      "prayer",
-      "hifz",
-    ],
-    photo: "photo-1558618666-fcd25c85cd64",
-  },
-  {
-    kw: ["independence", "national", "flag", "patriot", "republic", "ceremony"],
-    photo: "photo-1532375810709-75b1da00537c",
-  },
-  {
-    kw: [
-      "prize",
-      "award",
-      "distribut",
-      "achievement",
-      "honor",
-      "honour",
-      "trophy",
-    ],
-    photo: "photo-1540575467063-178a50c2df87",
-  },
-  {
-    kw: ["parent", "teacher", "meeting", "ptm", "academic", "conference"],
-    photo: "photo-1524178232363-1fb2b075b655",
-  },
-  {
-    kw: ["cultural", "dance", "music", "art", "talent", "drama", "perform"],
-    photo: "photo-1514320291840-2e0a9bf2a9ae",
-  },
-  {
-    kw: ["graduation", "farewell", "convocation", "pass", "result"],
-    photo: "photo-1523050854058-8df90110c9f1",
-  },
-  {
-    kw: ["health", "medical", "camp", "first aid", "dental", "eye"],
-    photo: "photo-1546410531-bb4caa6b424d",
-  },
-  {
-    kw: ["seminar", "workshop", "lecture", "training", "skill", "debate"],
-    photo: "photo-1503676260728-1c00da094a0b",
-  },
-  {
-    kw: ["library", "book", "reading", "literacy", "study"],
-    photo: "photo-1481627834876-b7833e8f5570",
-  },
-  {
-    kw: ["food", "feast", "iftar", "ramadan", "eid", "celebration", "festival"],
-    photo: "photo-1530103862676-de8c9debad1d",
-  },
-];
-const getEventImg = (title = "") => {
-  const t = title.toLowerCase();
-  const match = _EVENT_KW.find(({ kw }) => kw.some((k) => t.includes(k)));
-  const photo = match ? match.photo : "photo-1571260899304-425eee4c7efc";
-  return `https://images.unsplash.com/${photo}?auto=format&fit=crop&w=600&h=200&q=80`;
-};
-import { db, storage } from "@/src/lib/firebase";
+import { db } from "@/src/lib/firebase";
 import {
   collection,
   query,
@@ -110,20 +12,15 @@ import {
   deleteDoc,
   doc,
   orderBy,
-  serverTimestamp,
 } from "firebase/firestore";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
 import { toast } from "sonner";
 import PageHeader from "@/src/components/shared/PageHeader";
 import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
 import EmptyState from "@/src/components/shared/EmptyState";
 import LoadingSkeleton from "@/src/components/shared/LoadingSkeleton";
+import FileUploader from "@/src/components/shared/FileUploader";
 import { formatDate } from "@/src/lib/utils";
+import { uploadToCloudinary } from "@/src/lib/cloudinary";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -160,9 +57,8 @@ export default function GirlsEventsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const [formLoading, setFormLoading] = useState(false);
   const [posterFile, setPosterFile] = useState(null);
-  const [posterPreview, setPosterPreview] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     event: null,
@@ -194,7 +90,6 @@ export default function GirlsEventsPage() {
     setEditingEvent(null);
     setForm(emptyForm);
     setPosterFile(null);
-    setPosterPreview(null);
     setDialogOpen(true);
   };
   const openEdit = (event) => {
@@ -209,19 +104,7 @@ export default function GirlsEventsPage() {
       posterUrl: event.posterUrl || "",
     });
     setPosterFile(null);
-    setPosterPreview(event.posterUrl || null);
     setDialogOpen(true);
-  };
-
-  const handlePosterChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Poster must be under 5MB");
-      return;
-    }
-    setPosterFile(file);
-    setPosterPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async () => {
@@ -232,31 +115,30 @@ export default function GirlsEventsPage() {
     try {
       setFormLoading(true);
 
-      let posterUrl = form.posterUrl;
+      let uploadedUrl = form.posterUrl;
       if (posterFile) {
-        const eventId = editingEvent ? editingEvent.id : `evt_${Date.now()}`;
-        const ext = posterFile.name ? posterFile.name.split(".").pop() : "jpg";
-        const storageRef = ref(
-          storage,
-          `events/${eventId}/poster.${ext}`,
-        );
-        await uploadBytes(storageRef, posterFile);
-        posterUrl = await getDownloadURL(storageRef);
+        try {
+          uploadedUrl = await uploadToCloudinary(posterFile);
+        } catch (error) {
+          toast.error("Failed to upload poster. Please try again.");
+          setFormLoading(false);
+          return;
+        }
       }
+
       const payload = {
         ...form,
         date: form.eventDate,
-        posterUrl,
+        posterUrl: uploadedUrl || "",
         updatedAt: new Date().toISOString(),
       };
 
       if (editingEvent) {
-        await updateDoc(doc(db, "girls_events", editingEvent.id), {
-          ...payload,
-        });
+        const eventRef = doc(db, "girls_events", editingEvent.id);
+        await updateDoc(eventRef, { ...payload });
         toast.success("Event updated");
       } else {
-        await addDoc(collection(db, "girls_events"), {
+        const eventRef = await addDoc(collection(db, "girls_events"), {
           ...payload,
           portal: PORTAL,
           createdAt: new Date().toISOString(),
@@ -266,7 +148,7 @@ export default function GirlsEventsPage() {
       setDialogOpen(false);
       fetchEvents();
     } catch (err) {
-      toast.error(err?.message || "Failed to save event");
+      toast.error("Failed to save event. Please try again.");
     } finally {
       setFormLoading(false);
     }
@@ -277,11 +159,6 @@ export default function GirlsEventsPage() {
     try {
       setDeleteLoading(true);
       await deleteDoc(doc(db, "girls_events", deleteDialog.event.id));
-      if (deleteDialog.event.posterUrl) {
-        try {
-          await deleteObject(ref(storage, deleteDialog.event.posterUrl));
-        } catch {}
-      }
       toast.success("Event deleted");
       setEvents((prev) => prev.filter((e) => e.id !== deleteDialog.event.id));
     } catch {
@@ -355,21 +232,19 @@ export default function GirlsEventsPage() {
               style={{ border: "1px solid #E8DFD4" }}
             >
               <div className="relative" style={{ height: 200 }}>
+                <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center">
+                  <span className="text-xs text-neutral-500">No poster</span>
+                </div>
                 {event.posterUrl ? (
                   <img
                     src={event.posterUrl}
                     alt={event.title}
-                    onError={_onImgErr}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
                   />
-                ) : (
-                  <img
-                    src={getEventImg(event.title)}
-                    alt={event.title}
-                    onError={_onImgErr}
-                    className="w-full h-full object-cover"
-                  />
-                )}
+                ) : null}
                 <span
                   className="absolute top-3 right-3 text-white text-xs px-2 py-1 rounded"
                   style={{ background: statusColor[event.status] || "#8C7B6B" }}
@@ -562,41 +437,17 @@ export default function GirlsEventsPage() {
               >
                 Event Poster
               </label>
-              {posterPreview ? (
-                <div className="relative">
-                  <img
-                    src={posterPreview}
-                    alt="Preview"
-                    className="w-full h-32 object-cover rounded"
-                  />
-                  <button
-                    onClick={() => {
-                      setPosterFile(null);
-                      setPosterPreview(null);
-                      setForm({ ...form, posterUrl: "" });
-                    }}
-                    className="absolute top-2 right-2 bg-white rounded-full p-1 text-xs text-red-500"
-                    style={{ border: "1px solid #E8DFD4" }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <label
-                  className="flex flex-col items-center justify-center w-full h-24 rounded cursor-pointer"
-                  style={{ border: "2px dashed #E8DFD4" }}
-                >
-                  <span className="text-xs" style={{ color: "#8C7B6B" }}>
-                    Click to upload poster (max 5MB)
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePosterChange}
-                  />
-                </label>
-              )}
+              <FileUploader
+                onFileSelect={(file) => {
+                  setPosterFile(file);
+                  if (!file) {
+                    setForm({ ...form, posterUrl: "" });
+                  }
+                }}
+                accept="image/*"
+                label="Upload Poster"
+                currentUrl={form.posterUrl}
+              />
             </div>
             <div className="flex items-center gap-3">
               <Switch

@@ -1,107 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronRight, MapPin, Calendar } from "lucide-react";
+import EmptyState from "@/src/components/shared/EmptyState";
+import StatusBadge from "@/src/components/shared/StatusBadge";
 import { formatDate } from "@/src/lib/utils";
 import { db } from "@/src/lib/firebase";
 import { collection, query, where, limit, getDocs } from "firebase/firestore";
-import StatusBadge from "@/src/components/shared/StatusBadge";
-import EmptyState from "@/src/components/shared/EmptyState";
 
-// Keyword → relevant Unsplash photo (education/hostel theme)
-const _FALLBACK_PHOTO = "photo-1571260899304-425eee4c7efc";
-const _EVENT_KW = [
-  {
-    kw: [
-      "sport",
-      "cricket",
-      "football",
-      "athletics",
-      "game",
-      "tournament",
-      "run",
-      "race",
-      "ground",
-    ],
-    photo: "photo-1461896836934-ffe607ba8211",
-  },
-  {
-    kw: [
-      "science",
-      "exhibition",
-      "experiment",
-      "project",
-      "lab",
-      "tech",
-      "robot",
-    ],
-    photo: "photo-1544717302-de2939b7ef71",
-  },
-  {
-    kw: [
-      "quran",
-      "islamic",
-      "recitation",
-      "mosque",
-      "nasheed",
-      "prayer",
-      "hifz",
-    ],
-    photo: "photo-1558618666-fcd25c85cd64",
-  },
-  {
-    kw: ["independence", "national", "flag", "patriot", "republic", "ceremony"],
-    photo: "photo-1532375810709-75b1da00537c",
-  },
-  {
-    kw: [
-      "prize",
-      "award",
-      "distribut",
-      "achievement",
-      "honor",
-      "honour",
-      "trophy",
-    ],
-    photo: "photo-1540575467063-178a50c2df87",
-  },
-  {
-    kw: ["parent", "teacher", "meeting", "ptm", "academic", "conference"],
-    photo: "photo-1524178232363-1fb2b075b655",
-  },
-  {
-    kw: ["cultural", "dance", "music", "art", "talent", "drama", "perform"],
-    photo: "photo-1514320291840-2e0a9bf2a9ae",
-  },
-  {
-    kw: ["graduation", "farewell", "convocation", "pass", "result"],
-    photo: "photo-1523050854058-8df90110c9f1",
-  },
-  {
-    kw: ["health", "medical", "camp", "first aid", "dental", "eye"],
-    photo: "photo-1546410531-bb4caa6b424d",
-  },
-  {
-    kw: ["seminar", "workshop", "lecture", "training", "skill", "debate"],
-    photo: "photo-1503676260728-1c00da094a0b",
-  },
-  {
-    kw: ["library", "book", "reading", "literacy", "study"],
-    photo: "photo-1481627834876-b7833e8f5570",
-  },
-  {
-    kw: ["food", "feast", "iftar", "ramadan", "eid", "celebration", "festival"],
-    photo: "photo-1530103862676-de8c9debad1d",
-  },
-];
-const getEventImg = (title = "", w = 400, h = 220) => {
-  const t = title.toLowerCase();
-  const match = _EVENT_KW.find(({ kw }) => kw.some((k) => t.includes(k)));
-  const photo = match ? match.photo : _FALLBACK_PHOTO;
-  return `https://images.unsplash.com/${photo}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
-};
 
 // Page Hero Component
 function PageHero({ title, breadcrumbs }) {
@@ -268,15 +175,17 @@ export default function EventsPage() {
                 >
                   {/* Event Image */}
                   <div className="relative h-55">
-                    <Image
-                      src={getEventImg(event.title, 400, 220)}
-                      alt={event.title}
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=400&h=220&q=80`;
-                      }}
-                    />
+                    {event.posterUrl ? (
+                      <img
+                        src={event.posterUrl}
+                        alt={event.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center">
+                        <span className="text-xs text-neutral-500">No poster</span>
+                      </div>
+                    )}
                     <span className="absolute top-3 left-3 bg-brand text-white text-xs px-2 py-1 rounded">
                       {formatDate(event.date)}
                     </span>

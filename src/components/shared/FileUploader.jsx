@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, X, Image } from "lucide-react";
 
 export default function FileUploader({
@@ -15,6 +15,10 @@ export default function FileUploader({
   const [previewUrl, setPreviewUrl] = useState(currentUrl || null);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    setPreviewUrl(currentUrl || null);
+  }, [currentUrl]);
 
   const validate = (file) => {
     if (!file) return "No file selected";

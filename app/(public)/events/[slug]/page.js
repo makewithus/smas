@@ -1,197 +1,104 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { ArrowLeft, MapPin, Calendar, Clock, Users } from "lucide-react";
 import { db } from "@/src/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-
-// Keyword → relevant Unsplash photo (education/hostel theme)
-const _FALLBACK_PHOTO = "photo-1571260899304-425eee4c7efc";
-const _EVENT_KW = [
-  {
-    kw: [
-      "sport",
-      "cricket",
-      "football",
-      "athletics",
-      "game",
-      "tournament",
-      "run",
-      "race",
-      "ground",
-    ],
-    photo: "photo-1461896836934-ffe607ba8211",
-  },
-  {
-    kw: [
-      "science",
-      "exhibition",
-      "experiment",
-      "project",
-      "lab",
-      "tech",
-      "robot",
-    ],
-    photo: "photo-1544717302-de2939b7ef71",
-  },
-  {
-    kw: [
-      "quran",
-      "islamic",
-      "recitation",
-      "mosque",
-      "nasheed",
-      "prayer",
-      "hifz",
-    ],
-    photo: "photo-1558618666-fcd25c85cd64",
-  },
-  {
-    kw: ["independence", "national", "flag", "patriot", "republic", "ceremony"],
-    photo: "photo-1532375810709-75b1da00537c",
-  },
-  {
-    kw: [
-      "prize",
-      "award",
-      "distribut",
-      "achievement",
-      "honor",
-      "honour",
-      "trophy",
-    ],
-    photo: "photo-1540575467063-178a50c2df87",
-  },
-  {
-    kw: ["parent", "teacher", "meeting", "ptm", "academic", "conference"],
-    photo: "photo-1524178232363-1fb2b075b655",
-  },
-  {
-    kw: ["cultural", "dance", "music", "art", "talent", "drama", "perform"],
-    photo: "photo-1514320291840-2e0a9bf2a9ae",
-  },
-  {
-    kw: ["graduation", "farewell", "convocation", "pass", "result"],
-    photo: "photo-1523050854058-8df90110c9f1",
-  },
-  {
-    kw: ["health", "medical", "camp", "first aid", "dental", "eye"],
-    photo: "photo-1546410531-bb4caa6b424d",
-  },
-  {
-    kw: ["seminar", "workshop", "lecture", "training", "skill", "debate"],
-    photo: "photo-1503676260728-1c00da094a0b",
-  },
-  {
-    kw: ["library", "book", "reading", "literacy", "study"],
-    photo: "photo-1481627834876-b7833e8f5570",
-  },
-  {
-    kw: ["food", "feast", "iftar", "ramadan", "eid", "celebration", "festival"],
-    photo: "photo-1530103862676-de8c9debad1d",
-  },
-];
-const getEventImg = (title = "", w = 1200, h = 400) => {
-  const t = title.toLowerCase();
-  const match = _EVENT_KW.find(({ kw }) => kw.some((k) => t.includes(k)));
-  const photo = match ? match.photo : _FALLBACK_PHOTO;
-  return `https://images.unsplash.com/${photo}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
-};
-import { ArrowLeft, MapPin, Calendar, Clock, Users } from "lucide-react";
-import { formatDate } from "@/src/lib/utils";
 import StatusBadge from "@/src/components/shared/StatusBadge";
+import { formatDate } from "@/src/lib/utils";
 
-export default function EventDetailPage() {
+const toIsoDateKey = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const m = value.match(/^\d{4}-\d{2}-\d{2}/);
+    if (m) return m[0];
+  }
+  let date;
+  if (value?.toDate) date = value.toDate();
+  else if (value?.seconds) date = new Date(value.seconds * 1000);
+  else date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
+const computeStatus = (dateKey) => {
+  if (!dateKey) return "upcoming";
+  const todayKey = new Date().toISOString().slice(0, 10);
+  if (dateKey === todayKey) return "ongoing";
+  return dateKey > todayKey ? "upcoming" : "completed";
+};
+
+export default function EventDetailsPage() {
   const params = useParams();
+  const slugParam = params?.slug;
+  const id = Array.isArray(slugParam) ? slugParam[0] : slugParam;
+
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const toIsoDateKey = (value) => {
-    if (!value) return "";
-    if (typeof value === "string") {
-      const m = value.match(/^\d{4}-\d{2}-\d{2}/);
-      if (m) return m[0];
-    }
-    let date;
-    if (value?.toDate) date = value.toDate();
-    else if (value?.seconds) date = new Date(value.seconds * 1000);
-    else date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    return date.toISOString().slice(0, 10);
-  };
-
-  const computeStatus = (dateKey) => {
-    if (!dateKey) return "upcoming";
-    const todayKey = new Date().toISOString().slice(0, 10);
-    if (dateKey === todayKey) return "ongoing";
-    return dateKey > todayKey ? "upcoming" : "completed";
-  };
+  const [posterOk, setPosterOk] = useState(true);
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const id = String(params.slug || "");
-        if (!id) {
-          setEvent(null);
-          return;
-        }
+    if (!id) return;
 
-        const tryGet = async (collectionName) => {
-          const ref = doc(db, collectionName, id);
-          const snap = await getDoc(ref);
+    let cancelled = false;
+    const fetchEvent = async () => {
+      setLoading(true);
+      setPosterOk(true);
+
+      try {
+        const loadFrom = async (collectionName) => {
+          const snap = await getDoc(doc(db, collectionName, id));
           if (!snap.exists()) return null;
           return { id: snap.id, ...snap.data() };
         };
 
-        const fromBoys = await tryGet("boys_events");
-        const fromGirls = fromBoys ? null : await tryGet("girls_events");
-        const found = fromBoys || fromGirls;
+        const raw =
+          (await loadFrom("boys_events")) ?? (await loadFrom("girls_events"));
 
-        if (!found) {
+        if (cancelled) return;
+
+        if (!raw || raw.isPublic !== true) {
           setEvent(null);
           return;
         }
 
-        const rawDate = found.eventDate || found.date;
+        const rawDate = raw.eventDate || raw.date;
         const dateKey = toIsoDateKey(rawDate);
+        const status = raw.status || computeStatus(dateKey);
 
         setEvent({
-          id: found.id,
-          title: found.title || "Event",
-          description: found.description || "",
-          fullDescription: found.fullDescription || found.description || "",
+          id: raw.id,
+          title: raw.title || "Event",
+          description: raw.description || "",
+          fullDescription: raw.fullDescription || raw.description || "",
           date: rawDate,
-          time: found.time || "TBA",
-          venue: found.venue || "TBA",
-          organizer: found.organizer || "Administration",
-          expectedAttendees: found.expectedAttendees || "TBA",
-          status: computeStatus(dateKey),
+          time: raw.time || "TBA",
+          venue: raw.venue || "TBA",
+          expectedAttendees: raw.expectedAttendees || "—",
+          organizer: raw.organizer || "SMAS",
+          status,
+          posterUrl: raw.posterUrl || "",
         });
       } catch (e) {
-        console.error("Failed to load event detail", e);
-        setEvent(null);
+        console.error("Failed to load event", e);
+        if (!cancelled) setEvent(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchEvent();
-  }, [params.slug]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background py-8">
-        <div className="max-w-300 mx-auto px-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-neutral-200 rounded w-32 mb-6" />
-            <div className="h-100 bg-neutral-200 rounded-md mb-8" />
-            <div className="h-8 bg-neutral-200 rounded w-2/3 mb-4" />
-            <div className="h-4 bg-neutral-200 rounded w-full mb-2" />
-            <div className="h-4 bg-neutral-200 rounded w-3/4" />
-          </div>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-sm text-neutral-600">Loading event…</p>
       </div>
     );
   }
@@ -217,7 +124,6 @@ export default function EventDetailPage() {
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-300 mx-auto px-6">
-        {/* Back Button */}
         <Link
           href="/events"
           className="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900 mb-6"
@@ -226,22 +132,22 @@ export default function EventDetailPage() {
           All Events
         </Link>
 
-        {/* Event Poster */}
         <div className="relative h-75 md:h-100 rounded-md overflow-hidden mb-8">
-          <Image
-            src={getEventImg(event.title, 1200, 400)}
-            alt={event.title}
-            fill
-            className="object-cover"
-            onError={(e) => {
-              e.currentTarget.src = `https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=1200&h=400&q=80`;
-            }}
-          />
+          {event.posterUrl && posterOk ? (
+            <img
+              src={event.posterUrl}
+              alt={event.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={() => setPosterOk(false)}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center">
+              <span className="text-sm text-neutral-500">No poster</span>
+            </div>
+          )}
         </div>
 
-        {/* Event Content */}
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="flex items-start justify-between gap-4 mb-4">
               <h1 className="font-serif text-3xl text-brand">{event.title}</h1>
@@ -260,7 +166,6 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          {/* Sidebar Info */}
           <div className="lg:col-span-1">
             <div className="bg-white border border-[#E8DFD4] rounded-md p-6 sticky top-8">
               <h3 className="text-lg font-medium text-neutral-900 mb-4">

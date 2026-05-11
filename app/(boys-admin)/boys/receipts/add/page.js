@@ -31,6 +31,8 @@ export default function AddReceiptPage() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const [formData, setFormData] = useState({
+    receiptType: "fee",
+    payerName: "",
     feeMonth: "",
     feeYear: String(new Date().getFullYear()),
     amount: "",
@@ -91,9 +93,14 @@ export default function AddReceiptPage() {
 
   const validate = () => {
     const e = {};
-    if (!selectedStudent) e.student = "Please select a student";
-    if (!formData.feeMonth) e.feeMonth = "Fee month is required";
-    if (!formData.feeYear.trim()) e.feeYear = "Year is required";
+    if (formData.receiptType === "fee") {
+      if (!selectedStudent) e.student = "Please select a student";
+      if (!formData.feeMonth) e.feeMonth = "Fee month is required";
+      if (!formData.feeYear.trim()) e.feeYear = "Year is required";
+    } else {
+      if (!formData.payerName.trim()) e.payerName = "Name is required";
+    }
+    
     if (!formData.amount) e.amount = "Amount is required";
     else if (isNaN(Number(formData.amount)) || Number(formData.amount) <= 0)
       e.amount = "Enter a valid positive amount";
@@ -109,15 +116,9 @@ export default function AddReceiptPage() {
     setLoading(true);
     try {
       const receiptNumber = `RCP-B-${Date.now()}`;
-      await addDoc(collection(db, COLLECTION), {
+      const payload = {
         receiptNumber,
-        studentName: selectedStudent.name,
-        studentDocId: selectedStudent.id,
-        studentRollNumber: selectedStudent.studentId,
-        studentClass: selectedStudent.class,
-        studentPhone: selectedStudent.phone || "",
-        feeMonth: formData.feeMonth,
-        feeYear: formData.feeYear,
+        receiptType: formData.receiptType,
         amount: Number(formData.amount),
         paymentMethod: formData.paymentMethod,
         paymentDate: formData.paymentDate,
@@ -126,12 +127,26 @@ export default function AddReceiptPage() {
         portal: PORTAL,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (formData.receiptType === "fee") {
+        payload.studentName = selectedStudent.name;
+        payload.studentDocId = selectedStudent.id;
+        payload.studentRollNumber = selectedStudent.studentId;
+        payload.studentClass = selectedStudent.class;
+        payload.studentPhone = selectedStudent.phone || "";
+        payload.feeMonth = formData.feeMonth;
+        payload.feeYear = formData.feeYear;
+      } else {
+        payload.payerName = formData.payerName;
+      }
+
+      await addDoc(collection(db, COLLECTION), payload);
       toast.success("Receipt added successfully");
       router.push(`/${PORTAL}/receipts`);
     } catch (err) {
       console.error("Receipt add error:", err);
-      toast.error(err?.message || "Failed to add receipt");
+      toast.error("Failed to add receipt. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -150,9 +165,23 @@ export default function AddReceiptPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Student Selection */}
+        {/* Receipt Type & Student/Payer Details */}
         <div className="bg-white border border-[#E8DFD4] rounded-lg p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3">Select Student</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3">Receipt Category</p>
+          <Select value={formData.receiptType} onValueChange={(v) => handleSelect("receiptType", v)}>
+            <SelectTrigger className="h-9 text-sm border-[#E8DFD4] mb-5">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" sideOffset={4}>
+              <SelectItem value="fee">Student Fee</SelectItem>
+              <SelectItem value="donation">Donation</SelectItem>
+              <SelectItem value="miscellaneous">Miscellaneous</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {formData.receiptType === "fee" ? (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3 mt-4 pt-4 border-t border-[#E8DFD4]">Select Student</p>
 
           <div className="relative">
             <div className="relative">
@@ -202,6 +231,18 @@ export default function AddReceiptPage() {
                 className="text-[11px] text-neutral-400 hover:text-red-500 transition-colors shrink-0">Change</button>
             </div>
           )}
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3 mt-4 pt-4 border-t border-[#E8DFD4]">Payer Details</p>
+              <div>
+                <label className="text-xs font-medium text-neutral-700 mb-1 block">Name <span className="text-red-500">*</span></label>
+                <input name="payerName" value={formData.payerName} onChange={handleChange}
+                  className={`input h-9 text-sm ${errors.payerName ? "input-error" : ""}`} placeholder="Enter name" />
+                {errors.payerName && <p className="text-xs text-red-500 mt-1">{errors.payerName}</p>}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Fee Details */}
@@ -209,27 +250,31 @@ export default function AddReceiptPage() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-3">Fee Details</p>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Fee Month */}
-            <div>
-              <label className="text-xs font-medium text-neutral-700 mb-1 block">Fee Month <span className="text-red-500">*</span></label>
-              <Select value={formData.feeMonth} onValueChange={(v) => handleSelect("feeMonth", v)}>
-                <SelectTrigger className={`h-9 text-sm ${errors.feeMonth ? "border-red-500" : "border-[#E8DFD4]"}`}>
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent position="popper" sideOffset={4}>
-                  {MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {errors.feeMonth && <p className="text-xs text-red-500 mt-1">{errors.feeMonth}</p>}
-            </div>
+            {formData.receiptType === "fee" && (
+              <>
+                {/* Fee Month */}
+                <div>
+                  <label className="text-xs font-medium text-neutral-700 mb-1 block">Fee Month <span className="text-red-500">*</span></label>
+                  <Select value={formData.feeMonth} onValueChange={(v) => handleSelect("feeMonth", v)}>
+                    <SelectTrigger className={`h-9 text-sm ${errors.feeMonth ? "border-red-500" : "border-[#E8DFD4]"}`}>
+                      <SelectValue placeholder="Month" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" sideOffset={4}>
+                      {MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {errors.feeMonth && <p className="text-xs text-red-500 mt-1">{errors.feeMonth}</p>}
+                </div>
 
-            {/* Year */}
-            <div>
-              <label className="text-xs font-medium text-neutral-700 mb-1 block">Year <span className="text-red-500">*</span></label>
-              <input name="feeYear" value={formData.feeYear} onChange={handleChange}
-                className={`input h-9 text-sm ${errors.feeYear ? "input-error" : ""}`} placeholder="2026" />
-              {errors.feeYear && <p className="text-xs text-red-500 mt-1">{errors.feeYear}</p>}
-            </div>
+                {/* Year */}
+                <div>
+                  <label className="text-xs font-medium text-neutral-700 mb-1 block">Year <span className="text-red-500">*</span></label>
+                  <input name="feeYear" value={formData.feeYear} onChange={handleChange}
+                    className={`input h-9 text-sm ${errors.feeYear ? "input-error" : ""}`} placeholder="2026" />
+                  {errors.feeYear && <p className="text-xs text-red-500 mt-1">{errors.feeYear}</p>}
+                </div>
+              </>
+            )}
 
             {/* Amount */}
             <div>

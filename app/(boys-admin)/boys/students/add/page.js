@@ -4,15 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Loader2, Upload, X } from "lucide-react";
-import { db, storage } from "@/src/lib/firebase";
+import { db } from "@/src/lib/firebase";
 import {
   collection, addDoc, getDocs, query,
   orderBy, serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "sonner";
 import { CLASSES } from "@/src/lib/constants";
 import { generateStudentId } from "@/src/lib/utils";
+import FileUploader from "@/src/components/shared/FileUploader";
+import { uploadToCloudinary } from "@/src/lib/cloudinary";
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
@@ -39,7 +40,6 @@ export default function AddStudentPage() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -64,17 +64,6 @@ export default function AddStudentPage() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handlePhoto = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return toast.error("Please upload an image file");
-    if (file.size > 2 * 1024 * 1024) return toast.error("Image must be under 2MB");
-    setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setPhotoPreview(reader.result);
-    reader.readAsDataURL(file);
-  };
-
   const validate = () => {
     const e = {};
     if (!formData.name.trim() || formData.name.length < 2) e.name = "Full name required (min 2 chars)";
@@ -95,9 +84,7 @@ export default function AddStudentPage() {
       let photoUrl = null;
       if (photoFile) {
         try {
-          const sRef = ref(storage, `students/${PORTAL}/${Date.now()}_${photoFile.name}`);
-          await uploadBytes(sRef, photoFile);
-          photoUrl = await getDownloadURL(sRef);
+          photoUrl = await uploadToCloudinary(photoFile);
         } catch {
           // Photo upload optional — continue without it
         }
@@ -216,27 +203,11 @@ export default function AddStudentPage() {
           {/* Photo Card */}
           <div className="lg:col-span-2 bg-white border border-[#E8DFD4] rounded-md p-6 h-fit">
             <h3 className="text-sm font-medium text-neutral-900 mb-4">Profile Photo</h3>
-            {photoPreview ? (
-              <div className="text-center">
-                <div className="w-30 h-30 mx-auto mb-4 rounded-full overflow-hidden border-2 border-[#E8DFD4]">
-                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-                <p className="text-sm text-neutral-600 mb-1">{photoFile?.name}</p>
-                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-                  className="inline-flex items-center gap-1 text-sm text-red-500 hover:text-red-600">
-                  <X size={14} /> Remove
-                </button>
-              </div>
-            ) : (
-              <label className="block cursor-pointer">
-                <div className="border-2 border-dashed border-[#E8DFD4] rounded-md p-8 text-center hover:border-brand hover:bg-brand/5 transition-colors">
-                  <Upload size={32} className="mx-auto text-neutral-400 mb-3" />
-                  <p className="text-sm font-medium text-neutral-900 mb-1">Click to upload</p>
-                  <p className="text-xs text-neutral-600">JPG, PNG up to 2MB</p>
-                </div>
-                <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-              </label>
-            )}
+            <FileUploader
+              onFileSelect={setPhotoFile}
+              accept="image/*"
+              label="Upload Profile Photo"
+            />
           </div>
         </div>
       </form>

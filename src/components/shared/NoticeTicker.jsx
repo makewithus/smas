@@ -17,7 +17,7 @@ export default function NoticeTicker({ notices = [] }) {
       <div className="overflow-hidden flex-1">
         <span
           className="inline-block whitespace-nowrap text-xs"
-          style={{ animation: "marquee 30s linear infinite" }}
+          style={{ animation: "marquee 60s linear infinite" }}
         >
           {text}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{text}
         </span>
