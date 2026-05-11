@@ -120,7 +120,7 @@ export default function GirlsEventsPage() {
         try {
           uploadedUrl = await uploadToCloudinary(posterFile);
         } catch (error) {
-          toast.error("Failed to upload poster. Please try again.");
+          toast.error(error.message || "Failed to upload poster");
           setFormLoading(false);
           return;
         }
@@ -148,7 +148,7 @@ export default function GirlsEventsPage() {
       setDialogOpen(false);
       fetchEvents();
     } catch (err) {
-      toast.error("Failed to save event. Please try again.");
+      toast.error(err?.message || "Failed to save event");
     } finally {
       setFormLoading(false);
     }

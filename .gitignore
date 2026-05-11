@@ -3,6 +3,7 @@
 
 # Environment variables
 .env*.local
+.env.*
 .env
 
 # Common ignores
