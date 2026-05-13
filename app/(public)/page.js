@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { db } from "@/src/lib/firebase";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, where, limit, getDocs } from "firebase/firestore";
 import {
   ChevronLeft,
   ChevronRight,
@@ -165,13 +165,10 @@ function NoticeTicker() {
         const loadNotices = async (collectionName) => {
           const q = query(
             collection(db, collectionName),
-            orderBy("createdAt", "desc"),
-            limit(20)
+            where("enabled", "==", true)
           );
           const snap = await getDocs(q);
-          return snap.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((n) => n.enabled === true);
+          return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         };
 
         const [boys, girls] = await Promise.all([
@@ -186,6 +183,7 @@ function NoticeTicker() {
           (a, b) => getMillis(b.createdAt) - getMillis(a.createdAt)
         );
         const texts = merged
+          .slice(0, 20)
           .map((n) => n.title || n.text || n.content)
           .filter(Boolean);
 
