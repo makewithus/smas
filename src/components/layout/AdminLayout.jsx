@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -138,9 +139,15 @@ export default function AdminLayout({ children, portal }) {
         {/* Sidebar Header */}
         <div className="p-5 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/10 rounded-md flex items-center justify-center">
-              <span className="font-serif text-white text-lg">S</span>
-            </div>
+            <Image 
+              src="/smas_logo.png" 
+              alt="SMAS Logo" 
+              width={36} 
+              height={36} 
+              className="w-auto h-9 object-contain rounded-md bg-white/10 p-1"
+              style={{ width: 'auto', height: 'auto' }}
+              priority
+            />
             <span className="font-serif text-md text-white">
               Hudaibiyya College
             </span>

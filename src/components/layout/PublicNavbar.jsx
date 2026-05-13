@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { INSTITUTION } from '@/src/lib/constants'
@@ -27,8 +28,14 @@ export default function PublicNavbar() {
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between relative">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-brand rounded flex items-center justify-center">
-            <span className="font-serif text-white text-lg">S</span>
+          <div className="relative w-12 h-12 shrink-0">
+            <Image 
+              src="/smas_logo.png" 
+              alt="SMAS Logo" 
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-serif text-lg text-brand leading-tight">
