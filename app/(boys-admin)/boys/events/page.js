@@ -29,7 +29,7 @@ import StatusBadge from "@/src/components/shared/StatusBadge";
 import LoadingSkeleton from "@/src/components/shared/LoadingSkeleton";
 import FileUploader from "@/src/components/shared/FileUploader";
 import { formatDate } from "@/src/lib/utils";
-import { uploadToCloudinary } from "@/src/lib/cloudinary";
+import { deleteFromCloudinary, uploadToCloudinary } from "@/src/lib/cloudinary";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -148,6 +148,9 @@ export default function BoysEventsPage() {
       if (editingEvent) {
         const eventRef = doc(db, "boys_events", editingEvent.id);
         await updateDoc(eventRef, { ...payload });
+        if (editingEvent.posterUrl && editingEvent.posterUrl !== payload.posterUrl) {
+          await deleteFromCloudinary(editingEvent.posterUrl);
+        }
         toast.success("Event updated");
       } else {
         const eventRef = await addDoc(collection(db, "boys_events"), {
@@ -170,6 +173,9 @@ export default function BoysEventsPage() {
     if (!deleteDialog.event) return;
     try {
       setDeleteLoading(true);
+      if (deleteDialog.event.posterUrl) {
+        await deleteFromCloudinary(deleteDialog.event.posterUrl);
+      }
       await deleteDoc(doc(db, "boys_events", deleteDialog.event.id));
       toast.success("Event deleted");
       setEvents((prev) => prev.filter((e) => e.id !== deleteDialog.event.id));

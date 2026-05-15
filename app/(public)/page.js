@@ -201,7 +201,7 @@ function NoticeTicker() {
         Notices
       </div>
       <div className="h-full w-px bg-white/20" />
-      <div className="flex-1 overflow-hidden">
+      <div className="marquee-container flex-1 overflow-hidden">
         <div className="animate-marquee whitespace-nowrap text-sm text-white">
           {notices.join("  |  ")}
         </div>

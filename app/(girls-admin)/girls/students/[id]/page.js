@@ -28,6 +28,7 @@ import LoadingSkeleton from "@/src/components/shared/LoadingSkeleton";
 import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
 import { formatDate, formatCurrency } from "@/src/lib/utils";
 import { FEE_TYPES } from "@/src/lib/constants";
+import { deleteFromCloudinary } from "@/src/lib/cloudinary";
 import { useAuth } from '@/src/context/AuthContext'
 
 export default function ViewGirlStudentPage({ params }) {
@@ -74,6 +75,9 @@ export default function ViewGirlStudentPage({ params }) {
 
   const handleDelete = async () => {
     try {
+      if (student?.photoUrl) {
+        await deleteFromCloudinary(student.photoUrl);
+      }
       await deleteDoc(doc(db, "girls_students", id));
       toast.success("Student deleted successfully");
       router.push("/girls/students");

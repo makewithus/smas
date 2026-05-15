@@ -21,6 +21,7 @@ import LoadingSkeleton from "@/src/components/shared/LoadingSkeleton";
 import EmptyState from "@/src/components/shared/EmptyState";
 import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
 import { formatDate, getInitials, exportToCSV } from "@/src/lib/utils";
+import { deleteFromCloudinary } from "@/src/lib/cloudinary";
 import { CLASSES, DEFAULT_PAGE_SIZE } from "@/src/lib/constants";
 import {
   DropdownMenu, DropdownMenuContent,
@@ -105,6 +106,9 @@ export default function StudentsPage() {
   const handleDelete = async () => {
     if (!studentToDelete) return;
     try {
+      if (studentToDelete.photoUrl) {
+        await deleteFromCloudinary(studentToDelete.photoUrl);
+      }
       await deleteDoc(doc(db, COLLECTION, studentToDelete.id));
       setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
       toast.success(`${studentToDelete.name} deleted`);
@@ -117,6 +121,12 @@ export default function StudentsPage() {
 
   const handleBulkDelete = async () => {
     try {
+      const studentsToDelete = students.filter((s) => selectedRows.includes(s.id));
+      await Promise.all(
+        studentsToDelete
+          .filter((s) => s.photoUrl)
+          .map((s) => deleteFromCloudinary(s.photoUrl)),
+      );
       const batch = writeBatch(db);
       selectedRows.forEach((id) => batch.delete(doc(db, COLLECTION, id)));
       await batch.commit();

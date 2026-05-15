@@ -56,6 +56,14 @@ export default function BoysExpensesPage() {
         !e.vendor?.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !e.category?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (filters.category && e.category !== filters.category) return false;
+    const dateKey = (e.expenseDate?.toDate?.() ?? e.expenseDate ?? e.createdAt?.toDate?.() ?? e.createdAt);
+    const normalizedDate = typeof dateKey === "string"
+      ? dateKey.slice(0, 10)
+      : dateKey
+        ? new Date(dateKey).toISOString().slice(0, 10)
+        : "";
+    if (filters.dateFrom && (!normalizedDate || normalizedDate < filters.dateFrom)) return false;
+    if (filters.dateTo && (!normalizedDate || normalizedDate > filters.dateTo)) return false;
     return true;
   }), [expenses, searchQuery, filters]);
 
@@ -64,14 +72,14 @@ export default function BoysExpensesPage() {
   const activeFilters = Object.values(filters).filter(Boolean).length;
 
   const stats = useMemo(() => {
-    const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+    const total = filtered.reduce((s, e) => s + (e.amount || 0), 0);
     const now = new Date();
-    const monthly = expenses.filter((e) => {
-      const d = e.createdAt?.toDate?.() ?? (e.createdAt ? new Date(e.createdAt) : null);
+    const monthly = filtered.filter((e) => {
+      const d = e.expenseDate?.toDate?.() ?? (e.expenseDate ? new Date(e.expenseDate) : e.createdAt?.toDate?.() ?? (e.createdAt ? new Date(e.createdAt) : null));
       return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).reduce((s, e) => s + (e.amount || 0), 0);
-    return { count: expenses.length, total, monthly };
-  }, [expenses]);
+    return { count: filtered.length, total, monthly };
+  }, [filtered]);
 
   const toggleSelect = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const handleSelectAll = (e) => setSelected(e.target.checked ? paginated.map((x) => x.id) : []);
@@ -177,8 +185,26 @@ export default function BoysExpensesPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">From Date</label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded border border-[#E8DFD4] text-neutral-800 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">To Date</label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded border border-[#E8DFD4] text-neutral-800 focus:outline-none"
+              />
+            </div>
             {activeFilters > 0 && (
-              <div className="md:col-span-2 flex items-end">
+              <div className="md:col-span-3 flex items-end">
                 <button onClick={clearFilters} className="text-xs flex items-center gap-1 text-neutral-500 hover:text-neutral-800"><X size={12} /> Clear filters</button>
               </div>
             )}

@@ -118,7 +118,7 @@ export default function AdminLayout({ children, portal }) {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex min-h-screen bg-background">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
@@ -130,29 +130,15 @@ export default function AdminLayout({ children, portal }) {
       {/* Sidebar */}
       <aside
         className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-60 bg-brand flex flex-col
+        fixed lg:sticky top-0 inset-y-0 left-0 z-50
+        w-64 h-screen shrink-0 bg-brand flex flex-col
         transform transition-transform duration-200 ease-in-out
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
       >
         {/* Sidebar Header */}
-        <div className="p-5 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <Image 
-              src="/smas_logo.png" 
-              alt="SMAS Logo" 
-              width={36} 
-              height={36} 
-              className="w-auto h-9 object-contain rounded-md bg-white/10 p-1"
-              style={{ width: 'auto', height: 'auto' }}
-              priority
-            />
-            <span className="font-serif text-md text-white">
-              Hudaibiyya College
-            </span>
-          </div>
-          <div className="mt-3">
+        <div className="p-4 border-b border-white/10">
+          <div>
             <span className="inline-block bg-accent text-white text-xs px-2 py-0.5 rounded-full">
               {getPortalLabel(portal)}
             </span>
@@ -214,7 +200,7 @@ export default function AdminLayout({ children, portal }) {
           </div>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 text-white/50 hover:text-red-300 transition-colors"
+            className="flex items-center gap-2 text-red-300 hover:text-red-100 transition-colors"
           >
             <LogOut size={15} />
             <span className="text-sm">Sign Out</span>
@@ -223,9 +209,9 @@ export default function AdminLayout({ children, portal }) {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col">
         {/* Topbar */}
-        <header className="h-14 bg-white border-b border-[#E8DFD4] px-6 flex items-center justify-between shrink-0">
+        <header className="sticky top-0 z-30 h-14 bg-white border-b border-[#E8DFD4] px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Toggle */}
             <button
@@ -234,6 +220,22 @@ export default function AdminLayout({ children, portal }) {
             >
               <Menu size={22} />
             </button>
+
+            <Link href={getFullHref("/dashboard")} className="flex items-center gap-2.5 pr-4 border-r border-[#E8DFD4]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md border border-[#E8DFD4] bg-[#FAF6F1]">
+                <Image
+                  src="/smas_logo.png"
+                  alt="SMAS Logo"
+                  width={30}
+                  height={30}
+                  className="h-7 w-7 object-contain"
+                  priority
+                />
+              </span>
+              <span className="hidden sm:block font-serif text-base leading-none text-brand">
+                Hudaibiyya College
+              </span>
+            </Link>
 
             {/* Page Title & Breadcrumb */}
             <div>
@@ -285,7 +287,7 @@ export default function AdminLayout({ children, portal }) {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">
+        <main className="flex-1 bg-background p-4 md:p-6">
           {children}
         </main>
       </div>
@@ -297,7 +299,7 @@ export default function AdminLayout({ children, portal }) {
         title="Sign out?"
         description="You will be signed out of the admin portal."
         confirmLabel="Sign Out"
-        variant="warning"
+        variant="danger"
       />
     </div>
   );

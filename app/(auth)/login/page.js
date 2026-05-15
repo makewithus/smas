@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { INSTITUTION } from "@/src/lib/constants";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/src/lib/firebase";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,8 +21,6 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -33,20 +33,17 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setInfo("");
-
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
     // Validation
     if (!normalizedEmail) {
-      setError("Please enter your email");
+      toast.error("Please enter your email");
       return;
     }
 
     if (!normalizedPassword) {
-      setError("Please enter your password");
+      toast.error("Please enter your password");
       return;
     }
 
@@ -65,28 +62,26 @@ export default function LoginPage() {
       // Redirect to dashboard
       router.push(`/${selectedPortal}/dashboard`);
     } catch (err) {
-      setError(err.message || "Failed to sign in. Please try again.");
+      toast.error(err.message || "Failed to sign in. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleResetPassword = async () => {
-    setError("");
-    setInfo("");
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      setError("Enter your email first, then click Forgot password");
+      toast.error("Enter your email first, then click Forgot password");
       return;
     }
     try {
       setResetLoading(true);
       await sendPasswordResetEmail(auth, normalizedEmail);
-      setInfo(
+      toast.success(
         "Password reset email sent. Reset your password, then try signing in again.",
       );
     } catch (err) {
-      setError(err?.message || "Failed to send reset email. Please try again.");
+      toast.error(err?.message || "Failed to send reset email. Please try again.");
     } finally {
       setResetLoading(false);
     }
@@ -108,8 +103,15 @@ export default function LoginPage() {
         <div className="bg-white border border-[#E8DFD4] rounded-md p-10 shadow-card">
           {/* Logo & Header */}
           <div className="text-center mb-6">
-            <div className="w-8 h-8 bg-brand rounded-md flex items-center justify-center mx-auto mb-3">
-              <span className="font-serif text-white text-lg">S</span>
+            <div className="w-16 h-16 rounded-xl border border-[#E8DFD4] bg-[#F8F3ED] flex items-center justify-center mx-auto mb-4 overflow-hidden">
+              <Image
+                src="/smas_logo.png"
+                alt={`${INSTITUTION.name} logo`}
+                width={56}
+                height={56}
+                className="h-14 w-14 object-contain"
+                priority
+              />
             </div>
             <h1 className="font-serif text-xl text-brand">
               {INSTITUTION.name}
@@ -229,23 +231,6 @@ export default function LoginPage() {
               )}
             </button>
 
-            {/* Error Alert */}
-            {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                <AlertCircle
-                  size={16}
-                  className="text-red-500 shrink-0 mt-0.5"
-                />
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            {/* Info Alert */}
-            {info && (
-              <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm text-green-700">{info}</p>
-              </div>
-            )}
           </form>
         </div>
 

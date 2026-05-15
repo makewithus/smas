@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import StatusBadge from "@/src/components/shared/StatusBadge";
 import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
+import { deleteFromCloudinary } from "@/src/lib/cloudinary";
 
 const COLLECTION = "boys_students";
 const PORTAL = "boys";
@@ -68,6 +69,9 @@ export default function StudentDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      if (student?.photoUrl) {
+        await deleteFromCloudinary(student.photoUrl);
+      }
       await deleteDoc(doc(db, COLLECTION, id));
       toast.success("Student deleted");
       router.push(`/${PORTAL}/students`);

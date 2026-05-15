@@ -87,8 +87,8 @@ export const NAV_ITEMS = [
 
 // Firebase Error Messages
 export const FIREBASE_ERROR_MESSAGES = {
-  "auth/wrong-password": "Incorrect password",
-  "auth/user-not-found": "No account found with this email",
+  "auth/wrong-password": "Invalid credentials. Please check your email and password",
+  "auth/user-not-found": "Invalid credentials. Please check your email and password",
   "auth/too-many-requests": "Too many attempts. Please try again later",
   "auth/network-request-failed": "Network error. Check your connection",
   "auth/invalid-email": "Invalid email address",
@@ -96,7 +96,7 @@ export const FIREBASE_ERROR_MESSAGES = {
   "auth/invalid-credential":
     "Invalid credentials. Please check your email and password",
   "auth/operation-not-allowed":
-    "Email/Password sign-in is disabled. Enable it in Firebase Console",
+    "Sign in is unavailable. Please contact the administrator",
 };
 
 // Institution Info (can be customized)

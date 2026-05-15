@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Search, Filter, Download, Trash2, Eye, Printer, Receipt, IndianRupee, X, ChevronDown } from "lucide-react";
+import { Plus, Search, Filter, Download, Trash2, Eye, Printer, Receipt, IndianRupee, X } from "lucide-react";
 import { db } from "@/src/lib/firebase";
 import { collection, query, getDocs, deleteDoc, doc, orderBy, writeBatch } from "firebase/firestore";
 import { toast } from "sonner";
@@ -32,7 +32,7 @@ export default function BoysReceiptsPage() {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({ status: "", paymentMethod: "", month: "" });
+  const [filters, setFilters] = useState({ status: "", paymentMethod: "", month: "", dateFrom: "", dateTo: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,6 +57,13 @@ export default function BoysReceiptsPage() {
     } finally { setLoading(false); }
   };
 
+  const toDateKey = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value.slice(0, 10);
+    const date = value?.toDate?.() ?? (value?.seconds ? new Date(value.seconds * 1000) : new Date(value));
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  };
+
   const filtered = useMemo(() => receipts.filter((r) => {
     if (searchQuery && !r.receiptNumber?.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !r.studentName?.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -64,6 +71,9 @@ export default function BoysReceiptsPage() {
     if (filters.status && r.status !== filters.status) return false;
     if (filters.paymentMethod && r.paymentMethod !== filters.paymentMethod) return false;
     if (filters.month && r.feeMonth !== filters.month) return false;
+    const dateKey = toDateKey(r.paymentDate || r.createdAt);
+    if (filters.dateFrom && (!dateKey || dateKey < filters.dateFrom)) return false;
+    if (filters.dateTo && (!dateKey || dateKey > filters.dateTo)) return false;
     if (studentIdFilter && r.studentId !== studentIdFilter) return false;
     return true;
   }), [receipts, searchQuery, filters, studentIdFilter]);
@@ -73,10 +83,10 @@ export default function BoysReceiptsPage() {
   const activeFilters = Object.values(filters).filter(Boolean).length;
 
   const stats = useMemo(() => {
-    const total = receipts.reduce((s, r) => s + (r.amount || 0), 0);
-    const paid = receipts.filter((r) => r.status === "paid").reduce((s, r) => s + (r.amount || 0), 0);
-    return { count: receipts.length, total, paid, pending: total - paid };
-  }, [receipts]);
+    const total = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+    const paid = filtered.filter((r) => r.status === "paid").reduce((s, r) => s + (r.amount || 0), 0);
+    return { count: filtered.length, total, paid, pending: total - paid };
+  }, [filtered]);
 
   const toggleSelect = (id) => setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const handleSelectAll = (e) => setSelected(e.target.checked ? paginated.map((r) => r.id) : []);
@@ -106,7 +116,7 @@ export default function BoysReceiptsPage() {
     toast.success("Exported");
   };
 
-  const clearFilters = () => { setFilters({ status: "", paymentMethod: "", month: "" }); setSearchQuery(""); };
+  const clearFilters = () => { setFilters({ status: "", paymentMethod: "", month: "", dateFrom: "", dateTo: "" }); setSearchQuery(""); };
 
   if (loading) return <LoadingSkeleton type="table" />;
 
@@ -166,7 +176,7 @@ export default function BoysReceiptsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-5 gap-3" style={{ borderTop: `1px solid ${T.border}` }}>
             <div>
               <label className="block text-xs font-semibold mb-1.5 text-neutral-600">Status</label>
               <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
@@ -208,8 +218,26 @@ export default function BoysReceiptsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">From Date</label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded border border-[#E8DFD4] text-neutral-800 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 text-neutral-600">To Date</label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded border border-[#E8DFD4] text-neutral-800 focus:outline-none"
+              />
+            </div>
             {activeFilters > 0 && (
-              <div className="md:col-span-3">
+              <div className="md:col-span-5">
                 <button onClick={clearFilters} className="text-xs flex items-center gap-1 text-neutral-500 hover:text-neutral-800"><X size={12} /> Clear filters</button>
               </div>
             )}

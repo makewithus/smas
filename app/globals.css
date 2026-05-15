@@ -127,6 +127,26 @@
     font-family: inherit;
   }
 
+  button,
+  [role="button"],
+  a,
+  summary,
+  label[for],
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
   input:focus,
   textarea:focus,
   select:focus {
@@ -234,6 +254,11 @@
 
   .animate-marquee {
     animation: marquee 60s linear infinite;
+  }
+
+  .marquee-container:hover .animate-marquee,
+  .animate-marquee:hover {
+    animation-play-state: paused !important;
   }
 }
 

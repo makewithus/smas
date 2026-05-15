@@ -104,13 +104,13 @@ export default function GirlsExpensesPage() {
   const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
 
   const stats = useMemo(() => {
-    const totalAmount = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalAmount = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     const thisMonth = new Date().toISOString().slice(0, 7);
-    const monthlyAmount = expenses
+    const monthlyAmount = filteredExpenses
       .filter((e) => e.expenseDate?.startsWith(thisMonth))
       .reduce((sum, e) => sum + (e.amount || 0), 0);
-    return { total: expenses.length, totalAmount, monthlyAmount };
-  }, [expenses]);
+    return { total: filteredExpenses.length, totalAmount, monthlyAmount };
+  }, [filteredExpenses]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked)

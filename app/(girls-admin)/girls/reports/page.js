@@ -35,6 +35,7 @@ export default function GirlsReportsPage() {
   const [exportFormat, setExportFormat] = useState("csv");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const exportDatesReady = Boolean(dateFrom && dateTo);
 
   useEffect(() => {
     fetchData();
@@ -117,14 +118,21 @@ export default function GirlsReportsPage() {
     .map(([month, amount]) => ({ month, amount }));
 
   const handleExport = () => {
+    if (!exportDatesReady) {
+      toast.error("Please set both start and end date before downloading.");
+      return;
+    }
+    if (dateFrom > dateTo) {
+      toast.error("Start date cannot be after end date.");
+      return;
+    }
     const label = exportType.charAt(0).toUpperCase() + exportType.slice(1);
     const timestamp = new Date().toISOString().split("T")[0];
 
     const filterByDate = (items, dateField) => items.filter((item) => {
-      if (!dateFrom && !dateTo) return true;
       const raw = item[dateField];
       const d = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
-      if (!d) return true;
+      if (!d) return false;
       const ds = d.toISOString().split("T")[0];
       if (dateFrom && ds < dateFrom) return false;
       if (dateTo && ds > dateTo) return false;
@@ -136,7 +144,7 @@ export default function GirlsReportsPage() {
       let filename = "";
 
       if (exportType === "students" || exportType === "combined") {
-        const filtered = students;
+        const filtered = filterByDate(students, "joinDate");
         const headers = ["Student ID", "Name", "Class", "Phone", "Father Name", "Status", "Join Date"];
         const rows = filtered.map((s) => [s.rollNumber || "", s.name || "", s.class || "", s.phone || "", s.fatherName || "", s.status || "", s.joinDate || ""]);
         const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
@@ -162,7 +170,7 @@ export default function GirlsReportsPage() {
       toast.success(`${label} report downloaded as CSV`);
 
     } else {
-      const filteredStudents = students;
+      const filteredStudents = filterByDate(students, "joinDate");
       const filteredExpenses = filterByDate(expenses, "expenseDate");
       const totalExpAmt = filteredExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
       const dateRange = dateFrom || dateTo ? `${dateFrom || "—"} to ${dateTo || "—"}` : "All dates";
@@ -190,6 +198,7 @@ export default function GirlsReportsPage() {
         </body></html>`;
 
       const win = window.open("", "_blank");
+      if (!win) { toast.error("Pop-up blocked. Please allow pop-ups and try again."); return; }
       win.document.write(html);
       win.document.close();
       win.onload = () => { win.print(); };
@@ -633,8 +642,9 @@ export default function GirlsReportsPage() {
           <div className="flex flex-col justify-end">
             <button
               onClick={handleExport}
+              disabled={!exportDatesReady}
               className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-white rounded-md"
-              style={{ background: "#1B4332" }}
+              style={{ background: exportDatesReady ? "#1B4332" : "#8C7B6B", cursor: exportDatesReady ? "pointer" : "not-allowed", opacity: exportDatesReady ? 1 : 0.65 }}
             >
               <Download size={16} /> Download Report
             </button>
@@ -642,7 +652,7 @@ export default function GirlsReportsPage() {
               className="text-xs mt-2 text-center"
               style={{ color: "#8C7B6B" }}
             >
-              Reports include all filtered data
+              {exportDatesReady ? "Reports include data within the selected date range" : "Set both start and end date to enable download"}
             </p>
           </div>
         </div>

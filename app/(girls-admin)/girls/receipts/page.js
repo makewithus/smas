@@ -71,6 +71,8 @@ export default function GirlsReceiptsPage() {
     status: "",
     paymentMethod: "",
     month: "",
+    dateFrom: "",
+    dateTo: "",
   });
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -104,6 +106,13 @@ export default function GirlsReceiptsPage() {
     }
   };
 
+  const toDateKey = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value.slice(0, 10);
+    const date = value?.toDate?.() ?? (value?.seconds ? new Date(value.seconds * 1000) : new Date(value));
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  };
+
   const filtered = useMemo(
     () =>
       receipts.filter((r) => {
@@ -118,6 +127,11 @@ export default function GirlsReceiptsPage() {
         if (filters.paymentMethod && r.paymentMethod !== filters.paymentMethod)
           return false;
         if (filters.month && r.feeMonth !== filters.month) return false;
+        const dateKey = toDateKey(r.paymentDate || r.createdAt);
+        if (filters.dateFrom && (!dateKey || dateKey < filters.dateFrom))
+          return false;
+        if (filters.dateTo && (!dateKey || dateKey > filters.dateTo))
+          return false;
         if (studentIdFilter && r.studentId !== studentIdFilter) return false;
         return true;
       }),
@@ -132,12 +146,12 @@ export default function GirlsReceiptsPage() {
   const activeFilters = Object.values(filters).filter(Boolean).length;
 
   const stats = useMemo(() => {
-    const total = receipts.reduce((s, r) => s + (r.amount || 0), 0);
-    const paid = receipts
+    const total = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+    const paid = filtered
       .filter((r) => r.status === "paid")
       .reduce((s, r) => s + (r.amount || 0), 0);
-    return { count: receipts.length, total, paid, pending: total - paid };
-  }, [receipts]);
+    return { count: filtered.length, total, paid, pending: total - paid };
+  }, [filtered]);
 
   const toggleSelect = (id) =>
     setSelected((p) =>
@@ -188,7 +202,7 @@ export default function GirlsReceiptsPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ status: "", paymentMethod: "", month: "" });
+    setFilters({ status: "", paymentMethod: "", month: "", dateFrom: "", dateTo: "" });
     setSearchQuery("");
   };
 
@@ -317,7 +331,7 @@ export default function GirlsReceiptsPage() {
 
         {showFilters && (
           <div
-            className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4"
+            className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-5 gap-4"
             style={{ borderTop: `1px solid ${T.border}` }}
           >
             <div>
@@ -359,9 +373,9 @@ export default function GirlsReceiptsPage() {
               >
                 <option value="">All Methods</option>
                 {PAYMENT_METHODS
-                  ? Object.entries(PAYMENT_METHODS).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {v}
+                  ? PAYMENT_METHODS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
                       </option>
                     ))
                   : ["Cash", "Online Transfer", "Cheque", "Bank Deposit"].map(
@@ -396,8 +410,42 @@ export default function GirlsReceiptsPage() {
                 ))}
               </select>
             </div>
+            <div>
+              <label
+                className="block text-xs font-medium mb-1"
+                style={{ color: T.muted }}
+              >
+                From Date
+              </label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) =>
+                  setFilters({ ...filters, dateFrom: e.target.value })
+                }
+                className="w-full h-9 px-3 text-sm rounded border focus:outline-none"
+                style={{ borderColor: T.border, color: T.text }}
+              />
+            </div>
+            <div>
+              <label
+                className="block text-xs font-medium mb-1"
+                style={{ color: T.muted }}
+              >
+                To Date
+              </label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) =>
+                  setFilters({ ...filters, dateTo: e.target.value })
+                }
+                className="w-full h-9 px-3 text-sm rounded border focus:outline-none"
+                style={{ borderColor: T.border, color: T.text }}
+              />
+            </div>
             {activeFilters > 0 && (
-              <div className="md:col-span-3">
+              <div className="md:col-span-5">
                 <button
                   onClick={clearFilters}
                   className="text-xs flex items-center gap-1"

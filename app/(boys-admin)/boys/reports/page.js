@@ -45,6 +45,7 @@ export default function BoysReportsPage() {
   const [exportFormat, setExportFormat] = useState("csv");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const exportDatesReady = Boolean(dateFrom && dateTo);
 
   useEffect(() => {
     fetchData();
@@ -137,6 +138,14 @@ export default function BoysReportsPage() {
     .map(([month, amount]) => ({ month, amount }));
 
   const handleExport = () => {
+    if (!exportDatesReady) {
+      toast.error("Please set both start and end date before downloading.");
+      return;
+    }
+    if (dateFrom > dateTo) {
+      toast.error("Start date cannot be after end date.");
+      return;
+    }
     if (!students.length && !expenses.length) {
       toast.error("No data loaded yet. Please wait for the page to finish loading.");
       return;
@@ -152,14 +161,15 @@ export default function BoysReportsPage() {
     };
 
     const inRange = (dateStr) => {
-      if (!dateFrom && !dateTo) return true;
-      if (!dateStr) return true;
+      if (!dateStr) return false;
       if (dateFrom && dateStr < dateFrom) return false;
       if (dateTo && dateStr > dateTo) return false;
       return true;
     };
 
-    const filteredStudents = students;
+    const filteredStudents = students.filter((s) =>
+      inRange(toDateStr(s.admissionDate || s.createdAt)),
+    );
     const filteredExpenses = expenses.filter((e) => inRange(e.expenseDate));
 
     if (exportFormat === "csv") {
@@ -762,8 +772,9 @@ export default function BoysReportsPage() {
           <div className="flex flex-col justify-end">
             <button
               onClick={handleExport}
+              disabled={!exportDatesReady}
               className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-white rounded-md"
-              style={{ background: "#1B4332" }}
+              style={{ background: exportDatesReady ? "#1B4332" : "#8C7B6B", cursor: exportDatesReady ? "pointer" : "not-allowed", opacity: exportDatesReady ? 1 : 0.65 }}
             >
               <Download size={16} /> Download Report
             </button>
@@ -771,7 +782,7 @@ export default function BoysReportsPage() {
               className="text-xs mt-2 text-center"
               style={{ color: "#8C7B6B" }}
             >
-              Reports include all filtered data
+              {exportDatesReady ? "Reports include data within the selected date range" : "Set both start and end date to enable download"}
             </p>
           </div>
         </div>

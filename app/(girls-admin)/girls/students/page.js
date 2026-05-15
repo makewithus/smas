@@ -40,6 +40,7 @@ import ConfirmDialog from "@/src/components/shared/ConfirmDialog";
 import EmptyState from "@/src/components/shared/EmptyState";
 import { formatDate, formatCurrency, exportToCSV, debounce } from "@/src/lib/utils";
 import { PAYMENT_STATUS, CLASS_OPTIONS, FEE_TYPES } from "@/src/lib/constants";
+import { deleteFromCloudinary } from "@/src/lib/cloudinary";
 import { useAuth } from '@/src/context/AuthContext'
 
 export default function GirlsStudentsPage() {
@@ -136,6 +137,9 @@ export default function GirlsStudentsPage() {
   const handleDeleteStudent = async () => {
     if (!deleteDialog.student) return;
     try {
+      if (deleteDialog.student.photoUrl) {
+        await deleteFromCloudinary(deleteDialog.student.photoUrl);
+      }
       await deleteDoc(doc(db, "girls_students", deleteDialog.student.id));
       setStudents((prev) => prev.filter((s) => s.id !== deleteDialog.student.id));
       toast.success("Student deleted successfully");
@@ -148,6 +152,12 @@ export default function GirlsStudentsPage() {
 
   const handleBulkDelete = async () => {
     try {
+      const studentsToDelete = students.filter((s) => selectedStudents.includes(s.id));
+      await Promise.all(
+        studentsToDelete
+          .filter((s) => s.photoUrl)
+          .map((s) => deleteFromCloudinary(s.photoUrl)),
+      );
       const batch = writeBatch(db);
       selectedStudents.forEach((id) => {
         batch.delete(doc(db, "girls_students", id));
