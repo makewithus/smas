@@ -17,6 +17,58 @@ import {
 import { INSTITUTION, DEFAULT_NOTICES } from "@/src/lib/constants";
 import { formatDate } from "@/src/lib/utils";
 
+const institutionImages = [
+  "/images/WhatsApp Image 2026-05-14 at 2.41.56 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.41.57 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.41.58 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.41.59 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.00 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.00 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.01 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.01 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.02 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.03 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.04 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.05 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.06 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.06 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.08 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.08 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.10 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.11 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.12 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.13 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.14 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.15 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.16 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.17 PM.jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.18 PM (1).jpeg",
+  "/images/WhatsApp Image 2026-05-14 at 2.42.19 PM.jpeg",
+];
+
+const campusVideos = [
+  {
+    src: "/gif/WhatsApp Video 2026-05-14 at 2.30.09 PM.mp4",
+    title: "Campus Walkthrough",
+    text: "A calm look at the spaces students use every day.",
+  },
+  {
+    src: "/gif/WhatsApp Video 2026-05-14 at 2.30.10 PM.mp4",
+    title: "Learning Environment",
+    text: "Classrooms and common areas shaped for focused learning.",
+  },
+  {
+    src: "/gif/WhatsApp Video 2026-05-14 at 2.30.11 PM.mp4",
+    title: "Student Life",
+    text: "Daily moments from a disciplined and caring campus.",
+  },
+  {
+    src: "/gif/WhatsApp Video 2026-05-14 at 2.30.12 PM.mp4",
+    title: "Facilities",
+    text: "A quick view of the environment maintained for students.",
+  },
+];
+
 // Hero Slider Component
 function HeroSlider() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -155,6 +207,71 @@ function HeroSlider() {
   );
 }
 
+function InstitutionImageCarousel() {
+  const [currentImage, setCurrentImage] = useState(0);
+
+  const nextImage = useCallback(() => {
+    setCurrentImage((prev) => (prev + 1) % institutionImages.length);
+  }, []);
+
+  const prevImage = () => {
+    setCurrentImage((prev) =>
+      (prev - 1 + institutionImages.length) % institutionImages.length,
+    );
+  };
+
+  useEffect(() => {
+    const interval = setInterval(nextImage, 4500);
+    return () => clearInterval(interval);
+  }, [nextImage]);
+
+  return (
+    <div className="relative overflow-hidden rounded-md border border-[#E8DFD4] bg-white shadow-sm">
+      <div className="relative aspect-[16/9]">
+        <Image
+          src={institutionImages[currentImage]}
+          alt={`Institution view ${currentImage + 1}`}
+          fill
+          sizes="(max-width: 768px) 100vw, 46vw"
+          className="object-cover"
+          priority={currentImage === 0}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={prevImage}
+        className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/85 text-brand shadow-sm transition-colors hover:bg-white"
+        aria-label="Previous institution image"
+      >
+        <ChevronLeft size={20} />
+      </button>
+      <button
+        type="button"
+        onClick={nextImage}
+        className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/85 text-brand shadow-sm transition-colors hover:bg-white"
+        aria-label="Next institution image"
+      >
+        <ChevronRight size={20} />
+      </button>
+
+      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-white/85 px-2.5 py-1.5 shadow-sm">
+        {institutionImages.map((_, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => setCurrentImage(idx)}
+            className={`h-1.5 rounded-full transition-all ${
+              idx === currentImage ? "w-5 bg-brand" : "w-1.5 bg-neutral-400"
+            }`}
+            aria-label={`Show institution image ${idx + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Notice Marquee Component
 function NoticeTicker() {
   const [notices, setNotices] = useState(DEFAULT_NOTICES);
@@ -249,17 +366,59 @@ function IntroSection() {
             </div>
           </div>
 
-          {/* Image */}
-          <div className="relative">
-            <Image
-              src="/image3.jpeg"
-              alt="Institution building"
-              width={600}
-              height={450}
-              loading="eager"
-              className="rounded-md border border-[#E8DFD4] object-cover w-full h-auto"
-            />
+          <InstitutionImageCarousel />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CampusMediaSection() {
+  return (
+    <section className="py-18 bg-white">
+      <div className="max-w-300 mx-auto px-6">
+        <div className="mb-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <span className="text-xs uppercase tracking-wider text-accent mb-2 block">
+              Campus Glimpses
+            </span>
+            <h2 className="font-serif text-4xl text-brand">
+              A Closer Look at Student Life
+            </h2>
           </div>
+          <p className="max-w-150 text-sm leading-relaxed text-neutral-700">
+            Short campus clips showing the atmosphere, facilities, and everyday
+            movement inside Hudaibiyya Arabic College.
+          </p>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {campusVideos.map((item) => (
+            <article
+              key={item.src}
+              className="overflow-hidden rounded-md border border-[#E8DFD4] bg-background"
+            >
+              <div className="relative aspect-[4/5] bg-neutral-100">
+                <video
+                  src={item.src}
+                  className="h-full w-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="text-base font-medium text-neutral-900">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-neutral-600">
+                  {item.text}
+                </p>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
     </section>
@@ -484,6 +643,7 @@ export default function HomePage() {
       <HeroSlider />
       <NoticeTicker />
       <IntroSection />
+      <CampusMediaSection />
       <EventsSection />
       <StatsSection />
       <CTASection />
