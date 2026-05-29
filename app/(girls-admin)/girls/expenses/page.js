@@ -13,6 +13,7 @@ import {
   Wallet,
   IndianRupee,
   TrendingDown,
+  FileText,
 } from "lucide-react";
 import { db } from "@/src/lib/firebase";
 import {
@@ -174,6 +175,27 @@ export default function GirlsExpensesPage() {
     setSearchQuery("");
   };
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
+
+  const handleExpensePDF = (expense) => {
+    const catLabel = EXPENSE_CATEGORIES.find((c) => c.value === expense.category)?.label ?? expense.category ?? "";
+    const amtFormatted = `Rs. ${Number(expense.amount || 0).toLocaleString("en-IN")}`;
+    const html = `<!DOCTYPE html><html><head><title>Expense — ${expense.title || expense.description || ""}</title>
+      <style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px;}h1{font-size:18px;margin:0;}.header{text-align:center;border-bottom:2px solid #1B4332;padding-bottom:10px;margin-bottom:14px;}.meta{display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:14px;}table{width:100%;border-collapse:collapse;}th{background:#1B4332;color:#fff;text-align:left;padding:6px 8px;font-size:11px;}td{padding:5px 8px;border-bottom:1px solid #E8DFD4;font-size:11px;}.total{font-weight:bold;font-size:13px;}.footer{margin-top:16px;font-size:10px;color:#888;text-align:center;}@media print{body{padding:0;}}</style>
+      </head><body>
+      <div class="header"><h1>HUDAIBIYYA ARABIC COLLEGE</h1><div style="font-size:11px;color:#555;margin-top:4px">Hudaibiyya Islamic Charitable Trust, Vellanchira (Girls Section)</div></div>
+      <div class="meta"><span><strong>Expense Voucher</strong></span><span>Date: ${expense.expenseDate || ""}</span><span>Generated: ${new Date().toLocaleDateString("en-IN")}</span></div>
+      <table><thead><tr><th>Description</th><th>Category</th><th>Vendor</th><th>Payment Method</th><th>Amount</th></tr></thead>
+      <tbody><tr><td>${expense.title || expense.description || "—"}</td><td>${catLabel}</td><td>${expense.vendor || "—"}</td><td>${expense.paymentMethod || "—"}</td><td>${amtFormatted}</td></tr></tbody>
+      <tfoot><tr><td colspan="4" style="text-align:right;font-weight:bold;">Total</td><td class="total">${amtFormatted}</td></tr></tfoot></table>
+      ${expense.description ? `<p style="margin-top:12px;font-size:11px;"><strong>Notes:</strong> ${expense.description}</p>` : ""}
+      <div class="footer">This is a computer-generated expense voucher.</div>
+      </body></html>`;
+    const win = window.open("", "_blank");
+    if (!win) { toast.error("Pop-up blocked. Allow pop-ups to export."); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  };
 
   if (loading) return <LoadingSkeleton type="table" />;
 
@@ -481,6 +503,13 @@ export default function GirlsExpensesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleExpensePDF(expense)}
+                          className="p-1 hover:bg-neutral-50 rounded"
+                          title="Export PDF"
+                        >
+                          <FileText size={14} color="#1B4332" />
+                        </button>
                         <Link
                           href={`/girls/expenses/${expense.id}/edit`}
                           className="p-1 hover:bg-neutral-50 rounded"

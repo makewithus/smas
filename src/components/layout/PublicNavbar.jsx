@@ -42,7 +42,7 @@ export default function PublicNavbar() {
               {INSTITUTION.name}
             </span>
             <span className="text-xs text-neutral-600 leading-tight">
-              Vottancheri
+              Vellanchira
             </span>
           </div>
         </Link>

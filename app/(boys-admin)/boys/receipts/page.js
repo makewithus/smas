@@ -112,7 +112,16 @@ export default function BoysReceiptsPage() {
   };
 
   const handleExport = () => {
-    exportToCSV(filtered.map((r) => ({ "Receipt #": r.receiptNumber, Student: r.studentName, "Roll No": r.rollNumber, Month: r.feeMonth, Amount: r.amount, Method: r.paymentMethod, Status: r.status })), "boys-receipts");
+    exportToCSV(filtered.map((r) => ({
+      "Receipt #": r.receiptNumber,
+      "Type": r.receiptType || "fee",
+      Student: r.studentName || r.payerName || "",
+      "Roll No": r.rollNumber || r.studentRollNumber || "",
+      Month: r.feeMonth || "",
+      Amount: r.amount,
+      Method: r.paymentMethod,
+      Status: r.status,
+    })), "boys-receipts");
     toast.success("Exported");
   };
 
@@ -293,8 +302,16 @@ export default function BoysReceiptsPage() {
                       <p className="text-xs mt-0.5" style={{ color: T.muted }}>{formatDate(r.createdAt?.toDate?.() ?? r.createdAt)}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm font-medium" style={{ color: T.text }}>{r.studentName}</p>
-                      <p className="text-xs mt-0.5" style={{ color: T.muted }}>{r.rollNumber || r.studentRollNumber}</p>
+                      <p className="text-sm font-medium" style={{ color: T.text }}>
+                        {r.studentName || r.payerName || "—"}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: T.muted }}>
+                        {r.rollNumber || r.studentRollNumber
+                          ? `${r.rollNumber || r.studentRollNumber}`
+                          : r.receiptType && r.receiptType !== "fee"
+                          ? r.receiptType.charAt(0).toUpperCase() + r.receiptType.slice(1)
+                          : ""}
+                      </p>
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: T.text }}>{r.feeMonth} {r.feeYear}</td>
                     <td className="px-4 py-3">

@@ -189,9 +189,10 @@ export default function GirlsReceiptsPage() {
     exportToCSV(
       filtered.map((r) => ({
         "Receipt #": r.receiptNumber,
-        Student: r.studentName,
-        "Roll No": r.rollNumber,
-        Month: r.feeMonth,
+        "Type": r.receiptType || "fee",
+        Student: r.studentName || r.payerName || "",
+        "Roll No": r.rollNumber || r.studentRollNumber || "",
+        Month: r.feeMonth || "",
         Amount: r.amount,
         Method: r.paymentMethod,
         Status: r.status,
@@ -593,10 +594,14 @@ export default function GirlsReceiptsPage() {
                         className="text-sm font-medium"
                         style={{ color: T.text }}
                       >
-                        {r.studentName}
+                        {r.studentName || r.payerName || "—"}
                       </p>
                       <p className="text-xs mt-0.5" style={{ color: T.muted }}>
-                        {r.rollNumber || r.studentRollNumber}
+                        {r.rollNumber || r.studentRollNumber
+                          ? `${r.rollNumber || r.studentRollNumber}`
+                          : r.receiptType && r.receiptType !== "fee"
+                          ? r.receiptType.charAt(0).toUpperCase() + r.receiptType.slice(1)
+                          : ""}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: T.text }}>

@@ -137,7 +137,7 @@ function Objectives() {
 function InstitutionDetails() {
   const details = [
     { label: 'Established', value: '2005' },
-    { label: 'Location', value: 'Vottancheri' },
+    { label: 'Location', value: 'Vellanchira' },
     { label: 'Type', value: 'Boys & Girls Arabic College' },
     { label: 'Run By', value: 'Hudaibiyya Islamic Charitable Trust' },
     { label: 'Phone', value: '+91 94621 38738' },

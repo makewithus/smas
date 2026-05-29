@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { INSTITUTION } from "@/src/lib/constants";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { sendPasswordResetEmail, signOut as firebaseSignOut } from "firebase/auth";
 import { auth } from "@/src/lib/firebase";
 import { toast } from "sonner";
 
@@ -22,14 +22,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Redirect if already authenticated
+  // Sign out the current user when they load the login page to prevent automatic authentication/bypass
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      const p = localStorage.getItem("portal") || "boys";
-      router.replace(`/${p}/dashboard`);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, authLoading]);
+    const performSignOut = async () => {
+      try {
+        await firebaseSignOut(auth);
+        localStorage.removeItem("userProfile");
+        localStorage.removeItem("portal");
+      } catch (err) {
+        console.error("Sign out error on login mount:", err);
+      }
+    };
+    performSignOut();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,7 +67,17 @@ export default function LoginPage() {
       // Redirect to dashboard
       router.push(`/${selectedPortal}/dashboard`);
     } catch (err) {
-      toast.error(err.message || "Failed to sign in. Please try again.");
+      // Show clean, user-friendly message — never expose raw Firebase internals
+      const knownMessages = [
+        "Access denied for this portal",
+        "Your account has been deactivated",
+        "User profile not found",
+      ];
+      const isKnownMessage = knownMessages.some((m) => err.message?.includes(m));
+      const message = isKnownMessage
+        ? err.message
+        : "Invalid email or password. Please try again.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

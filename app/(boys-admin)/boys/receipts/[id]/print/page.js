@@ -89,7 +89,9 @@ export default function PrintBoysReceiptPage({ params }) {
         {/* Receipt Title */}
         <div className="text-center mb-6">
           <h2 className="text-xl font-bold text-gray-900 bg-gray-100 py-2 px-4 inline-block rounded">
-            FEE RECEIPT
+            {receipt.receiptType === "donation" ? "DONATION RECEIPT"
+              : receipt.receiptType === "miscellaneous" ? "MISCELLANEOUS RECEIPT"
+              : "FEE RECEIPT"}
           </h2>
         </div>
 
@@ -105,19 +107,28 @@ export default function PrintBoysReceiptPage({ params }) {
           </div>
         </div>
 
-        {/* Student Details */}
+        {/* Student / Payer Details */}
         <div className="border border-gray-300 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-gray-800 mb-3 border-b pb-2">Student Details</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p><span className="text-gray-500">Name:</span> <span className="font-medium">{receipt.studentName}</span></p>
-              <p><span className="text-gray-500">Roll Number:</span> <span className="font-medium">{receipt.studentRollNumber}</span></p>
+          <h3 className="font-semibold text-gray-800 mb-3 border-b pb-2">
+            {receipt.receiptType === "donation" || receipt.receiptType === "miscellaneous"
+              ? "Payer Details" : "Student Details"}
+          </h3>
+          {receipt.receiptType === "donation" || receipt.receiptType === "miscellaneous" ? (
+            <div className="text-sm">
+              <p><span className="text-gray-500">Name:</span> <span className="font-medium">{receipt.payerName || "—"}</span></p>
             </div>
-            <div>
-              <p><span className="text-gray-500">Class:</span> <span className="font-medium">{receipt.studentClass}</span></p>
-              <p><span className="text-gray-500">Phone:</span> <span className="font-medium">{receipt.studentPhone || "N/A"}</span></p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p><span className="text-gray-500">Name:</span> <span className="font-medium">{receipt.studentName}</span></p>
+                <p><span className="text-gray-500">Roll Number:</span> <span className="font-medium">{receipt.studentRollNumber}</span></p>
+              </div>
+              <div>
+                <p><span className="text-gray-500">Class:</span> <span className="font-medium">{receipt.studentClass}</span></p>
+                <p><span className="text-gray-500">Phone:</span> <span className="font-medium">{receipt.studentPhone || "N/A"}</span></p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Payment Details */}
@@ -131,7 +142,11 @@ export default function PrintBoysReceiptPage({ params }) {
             </thead>
             <tbody>
               <tr className="border-t">
-                <td className="px-4 py-3">Hostel Fee for {receipt.feeMonth}</td>
+                <td className="px-4 py-3">
+                  {receipt.receiptType === "donation" ? "Donation"
+                    : receipt.receiptType === "miscellaneous" ? "Miscellaneous Payment"
+                    : `Hostel Fee for ${receipt.feeMonth}`}
+                </td>
                 <td className="px-4 py-3 text-right">{formatCurrency(receipt.amount)}</td>
               </tr>
             </tbody>

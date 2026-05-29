@@ -68,19 +68,26 @@ export default function ViewGirlsReceiptPage({ params }) {
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b bg-gradient-to-r from-pink-600 to-pink-700">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3"><div className="p-2 bg-white/20 rounded-lg"><Receipt className="h-6 w-6 text-white" /></div><div><h2 className="text-xl font-bold text-white">Fee Receipt</h2><p className="text-pink-100">#{receipt.receiptNumber}</p></div></div>
+                <div className="flex items-center gap-3"><div className="p-2 bg-white/20 rounded-lg"><Receipt className="h-6 w-6 text-white" /></div><div><h2 className="text-xl font-bold text-white">{receipt.receiptType === "donation" ? "Donation Receipt" : receipt.receiptType === "miscellaneous" ? "Miscellaneous Receipt" : "Fee Receipt"}</h2><p className="text-pink-100">#{receipt.receiptNumber}</p></div></div>
                 <StatusBadge status={receipt.status} size="lg" />
               </div>
             </div>
             <div className="p-6 space-y-6">
               <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="h-14 w-14 rounded-full bg-pink-100 flex items-center justify-center"><span className="text-pink-600 font-bold text-xl">{receipt.studentName?.charAt(0)}</span></div>
-                <div><p className="font-semibold text-lg">{receipt.studentName}</p><p className="text-gray-600">Roll: {receipt.studentRollNumber}</p><p className="text-gray-600">Class: {receipt.studentClass}</p></div>
+                <div className="h-14 w-14 rounded-full bg-pink-100 flex items-center justify-center"><span className="text-pink-600 font-bold text-xl">{(receipt.studentName || receipt.payerName || "—").charAt(0)}</span></div>
+                <div>
+                  <p className="font-semibold text-lg">{receipt.studentName || receipt.payerName || "—"}</p>
+                  {receipt.studentRollNumber && <p className="text-gray-600">Roll: {receipt.studentRollNumber}</p>}
+                  {receipt.studentClass && <p className="text-gray-600">Class: {receipt.studentClass}</p>}
+                  {receipt.receiptType && receipt.receiptType !== "fee" && (
+                    <p className="text-xs mt-1 text-pink-600 font-semibold uppercase">{receipt.receiptType}</p>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded-lg"><div className="flex items-center gap-2 text-gray-500 mb-1"><Calendar className="h-4 w-4" /><span className="text-sm">Fee Month</span></div><p className="font-semibold">{receipt.feeMonth}</p></div>
+                <div className="p-4 bg-gray-50 rounded-lg"><div className="flex items-center gap-2 text-gray-500 mb-1"><Calendar className="h-4 w-4" /><span className="text-sm">{receipt.receiptType === "donation" || receipt.receiptType === "miscellaneous" ? "Period" : "Fee Month"}</span></div><p className="font-semibold">{receipt.feeMonth || "—"}</p></div>
                 <div className="p-4 bg-gray-50 rounded-lg"><div className="flex items-center gap-2 text-gray-500 mb-1"><Calendar className="h-4 w-4" /><span className="text-sm">Payment Date</span></div><p className="font-semibold">{formatDate(receipt.paymentDate)}</p></div>
-                <div className="p-4 bg-gray-50 rounded-lg"><div className="flex items-center gap-2 text-gray-500 mb-1"><CreditCard className="h-4 w-4" /><span className="text-sm">Payment Method</span></div><p className="font-semibold">{PAYMENT_METHODS[receipt.paymentMethod]}</p></div>
+                <div className="p-4 bg-gray-50 rounded-lg"><div className="flex items-center gap-2 text-gray-500 mb-1"><CreditCard className="h-4 w-4" /><span className="text-sm">Payment Method</span></div><p className="font-semibold">{PAYMENT_METHODS[receipt.paymentMethod] || receipt.paymentMethod}</p></div>
                 {receipt.transactionId && <div className="p-4 bg-gray-50 rounded-lg"><div className="text-gray-500 text-sm mb-1">Transaction ID</div><p className="font-semibold font-mono">{receipt.transactionId}</p></div>}
               </div>
               <div className="p-6 bg-pink-50 border border-pink-200 rounded-lg text-center"><p className="text-pink-600 text-sm mb-1">Amount Paid</p><p className="text-4xl font-bold text-pink-700">{formatCurrency(receipt.amount)}</p></div>
@@ -93,7 +100,9 @@ export default function ViewGirlsReceiptPage({ params }) {
             <h3 className="font-semibold mb-4">Quick Actions</h3>
             <div className="space-y-3">
               <Link href={`/girls/receipts/${id}/print`} className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-lg"><Printer className="h-5 w-5 text-gray-400" /><span>Print Receipt</span></Link>
-              <Link href={`/girls/students/${receipt.studentId}`} className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-lg"><User className="h-5 w-5 text-gray-400" /><span>View Student</span></Link>
+              {receipt.studentId && (
+                <Link href={`/girls/students/${receipt.studentId}`} className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-lg"><User className="h-5 w-5 text-gray-400" /><span>View Student</span></Link>
+              )}
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Search, Filter, Download, Trash2, Edit, Wallet, TrendingDown, IndianRupee, X } from "lucide-react";
+import { Plus, Search, Filter, Download, Trash2, Edit, Wallet, TrendingDown, IndianRupee, X, FileText } from "lucide-react";
 import { db } from "@/src/lib/firebase";
 import { collection, query, getDocs, deleteDoc, doc, orderBy, writeBatch } from "firebase/firestore";
 import { toast } from "sonner";
@@ -114,6 +114,34 @@ export default function BoysExpensesPage() {
   };
 
   const clearFilters = () => { setFilters({ category: "", dateFrom: "", dateTo: "" }); setSearchQuery(""); };
+
+  const handleExpensePDF = (expense) => {
+    const catLabel = EXPENSE_CATEGORIES.find((c) => c.value === expense.category)?.label ?? expense.category ?? "";
+    const dateStr = expense.expenseDate
+      ? expense.expenseDate
+      : expense.createdAt?.toDate
+      ? expense.createdAt.toDate().toISOString().split("T")[0]
+      : expense.createdAt
+      ? new Date(expense.createdAt).toISOString().split("T")[0]
+      : "";
+    const amtFormatted = `Rs. ${Number(expense.amount || 0).toLocaleString("en-IN")}`;
+    const html = `<!DOCTYPE html><html><head><title>Expense — ${expense.description || expense.title || ""}</title>
+      <style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px;}h1{font-size:18px;margin:0;}h2{font-size:13px;margin:14px 0 6px;color:#1B4332;}.header{text-align:center;border-bottom:2px solid #1B4332;padding-bottom:10px;margin-bottom:14px;}.meta{display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:14px;}table{width:100%;border-collapse:collapse;}th{background:#1B4332;color:#fff;text-align:left;padding:6px 8px;font-size:11px;}td{padding:5px 8px;border-bottom:1px solid #E8DFD4;font-size:11px;}.total{font-weight:bold;font-size:13px;}.footer{margin-top:16px;font-size:10px;color:#888;text-align:center;}@media print{body{padding:0;}}</style>
+      </head><body>
+      <div class="header"><h1>HUDAIBIYYA ARABIC COLLEGE</h1><div style="font-size:11px;color:#555;margin-top:4px">Hudaibiyya Islamic Charitable Trust, Vellanchira</div></div>
+      <div class="meta"><span><strong>Expense Voucher</strong></span><span>Date: ${dateStr}</span><span>Generated: ${new Date().toLocaleDateString("en-IN")}</span></div>
+      <table><thead><tr><th>Description</th><th>Category</th><th>Vendor</th><th>Payment Method</th><th>Amount</th></tr></thead>
+      <tbody><tr><td>${expense.description || expense.title || "—"}</td><td>${catLabel}</td><td>${expense.vendor || "—"}</td><td>${expense.paymentMethod || "—"}</td><td>${amtFormatted}</td></tr></tbody>
+      <tfoot><tr><td colspan="4" style="text-align:right;font-weight:bold;">Total</td><td class="total">${amtFormatted}</td></tr></tfoot></table>
+      ${expense.notes ? `<p style="margin-top:12px;font-size:11px;"><strong>Notes:</strong> ${expense.notes}</p>` : ""}
+      <div class="footer">This is a computer-generated expense voucher.</div>
+      </body></html>`;
+    const win = window.open("", "_blank");
+    if (!win) { toast.error("Pop-up blocked. Allow pop-ups to export."); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  };
 
   if (loading) return <LoadingSkeleton type="table" />;
 
@@ -273,6 +301,7 @@ export default function BoysExpensesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => handleExpensePDF(e)} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-brand hover:border-brand hover:bg-[#F0FAF4] transition-colors" title="Export PDF"><FileText size={13} /></button>
                         <Link href={`/boys/expenses/${e.id}/edit`} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors" title="Edit"><Edit size={13} /></Link>
                         <button onClick={() => setDeleteDialog({ open: true, expense: e })} className="inline-flex items-center justify-center w-7 h-7 rounded border border-[#E8DFD4] text-neutral-500 hover:text-red-600 hover:border-red-400 hover:bg-red-50 transition-colors" title="Delete"><Trash2 size={13} /></button>
                       </div>

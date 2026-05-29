@@ -108,7 +108,7 @@ export default function ViewBoysReceiptPage({ params }) {
                     <Receipt className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white">Fee Receipt</h2>
+                    <h2 className="text-xl font-bold text-white">{receipt.receiptType === "donation" ? "Donation Receipt" : receipt.receiptType === "miscellaneous" ? "Miscellaneous Receipt" : "Fee Receipt"}</h2>
                     <p className="text-blue-100">#{receipt.receiptNumber}</p>
                   </div>
                 </div>
@@ -117,19 +117,22 @@ export default function ViewBoysReceiptPage({ params }) {
             </div>
             
             <div className="p-6 space-y-6">
-              {/* Student Info */}
+              {/* Student / Payer Info */}
               <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                 <div className="h-14 w-14 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                   <span className="text-blue-600 font-bold text-xl">
-                    {receipt.studentName?.charAt(0) || "?"}
+                    {(receipt.studentName || receipt.payerName || "—").charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-lg">{receipt.studentName}</p>
-                  <p className="text-gray-600">Roll Number: {receipt.studentRollNumber}</p>
-                  <p className="text-gray-600">Class: {receipt.studentClass}</p>
+                  <p className="font-semibold text-gray-900 text-lg">{receipt.studentName || receipt.payerName || "—"}</p>
+                  {receipt.studentRollNumber && <p className="text-gray-600">Roll Number: {receipt.studentRollNumber}</p>}
+                  {receipt.studentClass && <p className="text-gray-600">Class: {receipt.studentClass}</p>}
                   {receipt.studentPhone && (
                     <p className="text-gray-600">Phone: {receipt.studentPhone}</p>
+                  )}
+                  {receipt.receiptType && receipt.receiptType !== "fee" && (
+                    <p className="text-xs mt-1 text-blue-600 font-semibold uppercase">{receipt.receiptType}</p>
                   )}
                 </div>
               </div>
@@ -139,9 +142,9 @@ export default function ViewBoysReceiptPage({ params }) {
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 text-gray-500 mb-1">
                     <Calendar className="h-4 w-4" />
-                    <span className="text-sm">Fee Month</span>
+                    <span className="text-sm">{receipt.receiptType === "donation" || receipt.receiptType === "miscellaneous" ? "Period" : "Fee Month"}</span>
                   </div>
-                  <p className="font-semibold text-gray-900">{receipt.feeMonth}</p>
+                  <p className="font-semibold text-gray-900">{receipt.feeMonth || "—"}</p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 text-gray-500 mb-1">
@@ -196,13 +199,15 @@ export default function ViewBoysReceiptPage({ params }) {
                 <Printer className="h-5 w-5 text-gray-400" />
                 <span>Print Receipt</span>
               </Link>
-              <Link
-                href={`/boys/students/${receipt.studentId}`}
-                className="flex items-center gap-3 w-full p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <User className="h-5 w-5 text-gray-400" />
-                <span>View Student Profile</span>
-              </Link>
+              {receipt.studentId && (
+                <Link
+                  href={`/boys/students/${receipt.studentId}`}
+                  className="flex items-center gap-3 w-full p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <User className="h-5 w-5 text-gray-400" />
+                  <span>View Student Profile</span>
+                </Link>
+              )}
             </div>
           </div>
 

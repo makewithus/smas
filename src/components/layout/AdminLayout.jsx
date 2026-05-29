@@ -40,7 +40,7 @@ const iconMap = {
   Settings,
 };
 
-const navItems = [
+const allNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
   { label: "Students", href: "/students", icon: "Users" },
   { label: "Receipts", href: "/receipts", icon: "Receipt" },
@@ -51,6 +51,9 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: "Settings" },
 ];
 
+// Girls portal does not have Events or Notices sections
+const GIRLS_EXCLUDED = ["/events", "/notices"];
+
 export default function AdminLayout({ children, portal }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,6 +61,11 @@ export default function AdminLayout({ children, portal }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileTimeout, setProfileTimeout] = useState(false);
   const [signOutDialogOpen, setSignOutDialogOpen] = useState(false);
+
+  // Filter nav items based on portal
+  const navItems = allNavItems.filter(
+    (item) => portal !== "girls" || !GIRLS_EXCLUDED.includes(item.href)
+  );
 
   // Safety valve: if user exists but profile never arrives within 4s, render anyway
   useEffect(() => {

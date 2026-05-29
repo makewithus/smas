@@ -104,7 +104,7 @@ export const INSTITUTION = {
   name: "Hudaibiyya Arabic College",
   fullName: "Hudaibiyya Arabic College",
   shortName: "HAC",
-  address: "Hudaibiyya Islamic Charitable Trust, Vottancheri",
+  address: "Hudaibiyya Islamic Charitable Trust, Vellanchira",
   phone: "+91 94621 38738",
   email: "hudaibiyyacollege@gmail.com",
   website: "www.hudaibiyyacollege.edu",

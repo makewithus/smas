@@ -190,7 +190,7 @@ export default function GirlsReportsPage() {
 
       const html = `<!DOCTYPE html><html><head><title>Hudaibiyya Arabic College — ${label} Report</title>
         <style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px;}h1{font-size:20px;margin:0;}h2{font-size:15px;margin:16px 0 8px;color:#1B4332;}.header{text-align:center;border-bottom:2px solid #1B4332;padding-bottom:12px;margin-bottom:16px;}.meta{display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{background:#1B4332;color:#fff;text-align:left;padding:6px 8px;font-size:11px;}td{padding:5px 8px;border-bottom:1px solid #E8DFD4;font-size:11px;}tr:nth-child(even) td{background:#FAF6F1;}.summary{margin-top:12px;font-size:11px;color:#555;}@media print{body{padding:0;}}</style></head><body>
-        <div class="header"><h1>HUDAIBIYYA ARABIC COLLEGE</h1><div style="font-size:11px;color:#555;margin-top:4px">Hudaibiyya Islamic Charitable Trust, Vottancheri &nbsp;|&nbsp; +91 94621 38738</div></div>
+        <div class="header"><h1>HUDAIBIYYA ARABIC COLLEGE</h1><div style="font-size:11px;color:#555;margin-top:4px">Hudaibiyya Islamic Charitable Trust, Vellanchira &nbsp;|&nbsp; +91 94621 38738</div></div>
         <div class="meta"><span><strong>${label} Report</strong></span><span>Date Range: ${dateRange}</span><span>Generated: ${new Date().toLocaleDateString("en-IN")}</span></div>
         ${exportType !== "expenses" ? `<h2>Student Report</h2><div class="summary">Total: ${filteredStudents.length} | Active: ${filteredStudents.filter(s=>s.status==="active").length} | Inactive: ${filteredStudents.filter(s=>s.status!=="active").length}</div>` : ""}
         ${sections}
@@ -618,7 +618,12 @@ export default function GirlsReportsPage() {
                     className="w-full h-8 border rounded px-2 text-xs"
                     style={{ borderColor: "#E8DFD4" }}
                     value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    max={dateTo || undefined}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDateFrom(val);
+                      if (dateTo && val > dateTo) setDateTo("");
+                    }}
                   />
                 </div>
                 <div>
@@ -633,6 +638,7 @@ export default function GirlsReportsPage() {
                     className="w-full h-8 border rounded px-2 text-xs"
                     style={{ borderColor: "#E8DFD4" }}
                     value={dateTo}
+                    min={dateFrom || undefined}
                     onChange={(e) => setDateTo(e.target.value)}
                   />
                 </div>
