@@ -106,7 +106,7 @@ export default function AdminLayout({ children, portal }) {
     setIsSidebarOpen(false);
   }, [pathname]);
 
-  // Redirect only when definitely not authenticated
+ 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/login");
