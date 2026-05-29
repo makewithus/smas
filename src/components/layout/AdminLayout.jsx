@@ -113,8 +113,6 @@ export default function AdminLayout({ children, portal }) {
     }
   }, [loading, user, router]);
 
-  // Show spinner only while auth is resolving; once user is confirmed,
-  // wait max 4s for profile then render anyway (avoids infinite loading)
   if (loading || (user && !userProfile && !profileTimeout)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
