@@ -66,7 +66,12 @@ export default function PrintGirlsReceiptPage({ params }) {
 
         <div className="flex justify-between mb-6 text-sm">
           <div><p><span className="font-semibold">Receipt No:</span> {receipt.receiptNumber}</p><p><span className="font-semibold">Date:</span> {formatDate(receipt.paymentDate)}</p></div>
-          <div className="text-right"><p><span className="font-semibold">Fee Month:</span> {receipt.feeMonth}</p><p><span className="font-semibold">Status:</span> <span className="uppercase">{receipt.status}</span></p></div>
+          <div className="text-right">
+            {receipt.receiptType === "fee" && (
+              <p><span className="font-semibold">Fee Month:</span> {receipt.feeMonth || "—"}</p>
+            )}
+            <p><span className="font-semibold">Status:</span> <span className="uppercase">{receipt.status}</span></p>
+          </div>
         </div>
 
         {/* Student / Payer Details */}
@@ -77,7 +82,7 @@ export default function PrintGirlsReceiptPage({ params }) {
           </h3>
           {receipt.receiptType === "donation" || receipt.receiptType === "miscellaneous" ? (
             <div className="text-sm">
-              <p><span className="text-gray-500">Name:</span> <span className="font-medium">{receipt.payerName || "—"}</span></p>
+              <p><span className="text-gray-500">Name:</span> <span className="font-medium">{receipt.payerName || receipt.name || receipt.donorName || receipt.studentName || "—"}</span></p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 text-sm">

@@ -121,11 +121,11 @@ export default function ViewBoysReceiptPage({ params }) {
               <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                 <div className="h-14 w-14 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                   <span className="text-blue-600 font-bold text-xl">
-                    {(receipt.studentName || receipt.payerName || "—").charAt(0)}
+                    {(receipt.studentName || receipt.payerName || receipt.name || receipt.donorName || "—").charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-lg">{receipt.studentName || receipt.payerName || "—"}</p>
+                  <p className="font-semibold text-gray-900 text-lg">{receipt.studentName || receipt.payerName || receipt.name || receipt.donorName || "—"}</p>
                   {receipt.studentRollNumber && <p className="text-gray-600">Roll Number: {receipt.studentRollNumber}</p>}
                   {receipt.studentClass && <p className="text-gray-600">Class: {receipt.studentClass}</p>}
                   {receipt.studentPhone && (

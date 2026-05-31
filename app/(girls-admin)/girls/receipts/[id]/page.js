@@ -74,9 +74,9 @@ export default function ViewGirlsReceiptPage({ params }) {
             </div>
             <div className="p-6 space-y-6">
               <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="h-14 w-14 rounded-full bg-pink-100 flex items-center justify-center"><span className="text-pink-600 font-bold text-xl">{(receipt.studentName || receipt.payerName || "—").charAt(0)}</span></div>
+                <div className="h-14 w-14 rounded-full bg-pink-100 flex items-center justify-center"><span className="text-pink-600 font-bold text-xl">{(receipt.studentName || receipt.payerName || receipt.name || receipt.donorName || "—").charAt(0)}</span></div>
                 <div>
-                  <p className="font-semibold text-lg">{receipt.studentName || receipt.payerName || "—"}</p>
+                  <p className="font-semibold text-lg">{receipt.studentName || receipt.payerName || receipt.name || receipt.donorName || "—"}</p>
                   {receipt.studentRollNumber && <p className="text-gray-600">Roll: {receipt.studentRollNumber}</p>}
                   {receipt.studentClass && <p className="text-gray-600">Class: {receipt.studentClass}</p>}
                   {receipt.receiptType && receipt.receiptType !== "fee" && (

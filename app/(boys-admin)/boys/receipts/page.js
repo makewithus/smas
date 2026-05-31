@@ -303,7 +303,7 @@ export default function BoysReceiptsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium" style={{ color: T.text }}>
-                        {r.studentName || r.payerName || "—"}
+                        {r.studentName || r.payerName || r.name || r.donorName || "—"}
                       </p>
                       <p className="text-xs mt-0.5" style={{ color: T.muted }}>
                         {r.rollNumber || r.studentRollNumber
@@ -313,7 +313,11 @@ export default function BoysReceiptsPage() {
                           : ""}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: T.text }}>{r.feeMonth} {r.feeYear}</td>
+                    <td className="px-4 py-3 text-sm" style={{ color: T.text }}>
+                      {r.receiptType === "fee" 
+                        ? `${r.feeMonth || ""} ${r.feeYear || ""}`.trim() || "—"
+                        : "—"}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-semibold" style={{ color: T.text }}>{formatCurrency(r.amount)}</p>
                       <p className="text-xs mt-0.5" style={{ color: T.muted }}>{r.paymentMethod}</p>
