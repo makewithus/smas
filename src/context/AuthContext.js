@@ -9,7 +9,10 @@ import {
   useCallback,
 } from "react";
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   onAuthStateChanged,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from "firebase/auth";
@@ -19,13 +22,44 @@ import { FIREBASE_ERROR_MESSAGES, ROLES } from "@/src/lib/constants";
 
 const AuthContext = createContext({});
 
+const rolePortalMap = {
+  [ROLES.SUPER_ADMIN]: ["boys", "girls"],
+  [ROLES.BOYS_ADMIN]: ["boys"],
+  [ROLES.GIRLS_ADMIN]: ["girls"],
+};
+
+function getAllowedPortals(role) {
+  return rolePortalMap[role] || [];
+}
+
+async function createServerSession(firebaseUser, portal, rememberMe) {
+  const token = await firebaseUser.getIdToken(true);
+  const response = await fetch("/api/auth/session", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ portal, rememberMe }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Unable to create secure session");
+  }
+}
+
+async function clearServerSession() {
+  await fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [portal, setPortal] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile from Firestore with offline fallback
+  // Fetch user profile from Firestore. Cached profiles are never trusted for auth.
   const fetchUserProfile = useCallback(async (uid) => {
     try {
       const userDoc = await getDoc(doc(db, "users", uid));
@@ -34,67 +68,66 @@ export function AuthProvider({ children }) {
       }
       return null;
     } catch (error) {
-      if (
-        error?.code === "unavailable" ||
-        error?.message?.includes("offline") ||
-        error?.message?.includes("client is offline")
-      ) {
-        try {
-          const cached = localStorage.getItem("userProfile");
-          if (cached) return JSON.parse(cached);
-        } catch (_) {}
-        return null;
-      }
       console.error("Error fetching user profile:", error);
       return null;
     }
   }, []);
 
-  // Listen for auth state changes
+  // Listen for auth state changes and verify against server session
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Load cached profile immediately to avoid blank flash
-        let resolvedProfile = null;
         try {
-          const cached = localStorage.getItem("userProfile");
-          if (cached) resolvedProfile = JSON.parse(cached);
-        } catch (_) {}
-
-        // Fetch fresh from Firestore
-        const fresh = await fetchUserProfile(firebaseUser.uid);
-        if (fresh) resolvedProfile = fresh;
-
-        if (resolvedProfile) {
-          localStorage.setItem("userProfile", JSON.stringify(resolvedProfile));
-          const p = resolvedProfile.portal || "boys";
-          localStorage.setItem("portal", p);
-          // Batch all state updates together — single render
-          setUser(firebaseUser);
-          setUserProfile(resolvedProfile);
-          setPortal(p);
-        } else {
-          // Profile not found in Firestore — preserve any existing cached state
-          setUser(firebaseUser);
-          setUserProfile((prev) => {
-            if (prev) return prev;
-            // Last-resort: try localStorage (may have been set by signIn already)
-            try {
-              const cached = localStorage.getItem("userProfile");
-              if (cached) return JSON.parse(cached);
-            } catch (_) {}
-            return null;
-          });
-          setPortal((prev) => {
-            if (prev) return prev;
-            return localStorage.getItem("portal") || null;
-          });
+          const response = await fetch("/api/auth/session");
+          if (!response.ok) {
+            await clearServerSession();
+            await firebaseSignOut(auth);
+            setUser(null);
+            setUserProfile(null);
+            setPortal(null);
+            localStorage.removeItem("portal");
+          } else {
+            const data = await response.json();
+            if (data.authenticated && data.user.uid === firebaseUser.uid) {
+              const resolvedProfile = await fetchUserProfile(firebaseUser.uid);
+              if (resolvedProfile?.active === true) {
+                setUser(firebaseUser);
+                setUserProfile(resolvedProfile);
+                setPortal(data.user.portal);
+                localStorage.setItem("portal", data.user.portal);
+              } else {
+                await clearServerSession();
+                await firebaseSignOut(auth);
+                setUser(null);
+                setUserProfile(null);
+                setPortal(null);
+                localStorage.removeItem("portal");
+              }
+            } else {
+              await clearServerSession();
+              await firebaseSignOut(auth);
+              setUser(null);
+              setUserProfile(null);
+              setPortal(null);
+              localStorage.removeItem("portal");
+            }
+          }
+        } catch (error) {
+          console.error("Auth state synchronization error:", error);
+          await clearServerSession();
+          await firebaseSignOut(auth);
+          setUser(null);
+          setUserProfile(null);
+          setPortal(null);
+          localStorage.removeItem("portal");
         }
       } else {
+        if (typeof window !== "undefined" && localStorage.getItem("portal")) {
+          await clearServerSession();
+        }
         setUser(null);
         setUserProfile(null);
         setPortal(null);
-        localStorage.removeItem("userProfile");
         localStorage.removeItem("portal");
       }
       setLoading(false);
@@ -105,10 +138,14 @@ export function AuthProvider({ children }) {
 
   // Sign in function
   const signIn = useCallback(
-    async (email, password, selectedPortal) => {
+    async (email, password, selectedPortal, rememberSession = false) => {
       try {
         const normalizedEmail = email.trim().toLowerCase();
-        const normalizedPassword = password.trim();
+        const normalizedPassword = password;
+        await setPersistence(
+          auth,
+          rememberSession ? browserLocalPersistence : browserSessionPersistence,
+        );
         const result = await signInWithEmailAndPassword(
           auth,
           normalizedEmail,
@@ -132,20 +169,15 @@ export function AuthProvider({ children }) {
           );
         }
 
-        const rolePortalMap = {
-          [ROLES.SUPER_ADMIN]: ["boys", "girls", "super"],
-          [ROLES.BOYS_ADMIN]: ["boys"],
-          [ROLES.GIRLS_ADMIN]: ["girls"],
-        };
-
-        const allowedPortals = rolePortalMap[profile.role] || [];
+        const allowedPortals = getAllowedPortals(profile.role);
         if (!allowedPortals.includes(selectedPortal)) {
           await firebaseSignOut(auth);
           throw new Error("Access denied for this portal");
         }
 
-        localStorage.setItem("userProfile", JSON.stringify(profile));
+        await createServerSession(firebaseUser, selectedPortal, rememberSession);
         localStorage.setItem("portal", selectedPortal);
+        setUser(firebaseUser);
         setUserProfile(profile);
         setPortal(selectedPortal);
 
@@ -165,10 +197,10 @@ export function AuthProvider({ children }) {
   const signOut = useCallback(async () => {
     try {
       await firebaseSignOut(auth);
+      await clearServerSession();
       setUser(null);
       setUserProfile(null);
       setPortal(null);
-      localStorage.removeItem("userProfile");
       localStorage.removeItem("portal");
       if (typeof window !== "undefined") {
         window.location.href = "/";

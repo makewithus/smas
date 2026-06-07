@@ -59,20 +59,12 @@ export default function AdminLayout({ children, portal }) {
   const pathname = usePathname();
   const { user, userProfile, signOut, loading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [profileTimeout, setProfileTimeout] = useState(false);
   const [signOutDialogOpen, setSignOutDialogOpen] = useState(false);
 
   // Filter nav items based on portal
   const navItems = allNavItems.filter(
     (item) => portal !== "girls" || !GIRLS_EXCLUDED.includes(item.href)
   );
-
-  // Safety valve: if user exists but profile never arrives within 4s, render anyway
-  useEffect(() => {
-    if (!user || userProfile) return;
-    const t = setTimeout(() => setProfileTimeout(true), 4000);
-    return () => clearTimeout(t);
-  }, [user, userProfile]);
 
   // Get current page title from path
   const getPageTitle = () => {
@@ -113,7 +105,7 @@ export default function AdminLayout({ children, portal }) {
     }
   }, [loading, user, router]);
 
-  if (loading || (user && !userProfile && !profileTimeout)) {
+  if (loading || (user && !userProfile)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-neutral-600">Loading...</div>
@@ -121,7 +113,7 @@ export default function AdminLayout({ children, portal }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || !userProfile) return null;
 
   return (
     <div className="flex min-h-screen bg-background">

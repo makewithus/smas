@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, loading: authLoading, isAuthenticated } = useAuth();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,13 +22,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Sign out the current user when they load the login page to prevent automatic authentication/bypass
+  // Clear any previous admin session before accepting new credentials.
   useEffect(() => {
     const performSignOut = async () => {
       try {
         await firebaseSignOut(auth);
-        localStorage.removeItem("userProfile");
         localStorage.removeItem("portal");
+        await fetch("/api/auth/session", { method: "DELETE" });
       } catch (err) {
         console.error("Sign out error on login mount:", err);
       }
@@ -55,7 +55,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(normalizedEmail, normalizedPassword, selectedPortal);
+      await signIn(normalizedEmail, normalizedPassword, selectedPortal, rememberMe);
 
       // Store remember me preference
       if (rememberMe) {

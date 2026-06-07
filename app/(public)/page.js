@@ -162,18 +162,9 @@ function HeroSlider() {
           <h1 className="font-serif text-3xl md:text-5xl text-white font-normal mb-4 text-balance">
             {slides[currentSlide].title}
           </h1>
-          <p className="text-base md:text-lg text-white/80 mb-4 max-w-125 mx-auto">
+          <p className="text-base md:text-lg text-white/80 mb-6 max-w-125 mx-auto">
             {slides[currentSlide].subtitle}
           </p>
-          {/* Institution Motto */}
-          <div className="mb-6 flex flex-col items-center gap-1">
-            <span className="text-white/90 text-sm md:text-base font-medium tracking-wide">
-              Knowledge, Virtue, Leadership
-            </span>
-            <span className="text-white/80 text-base md:text-lg font-medium" dir="rtl">
-              المعرفة، الفضيلة، القيادة
-            </span>
-          </div>
           <Link
             href="/about"
             className="inline-flex items-center gap-2 bg-white text-brand px-5 py-2.5 rounded-md text-sm font-medium hover:bg-neutral-100 transition-colors"
@@ -358,7 +349,7 @@ function IntroSection() {
             </h2>
             <div className="w-12 h-0.5 bg-accent mb-5" />
             <p className="text-md text-neutral-800/80 leading-relaxed mb-4">
-              Hudaibiyya Arabic College, run by Hudaibiyya Islamic Charitable Trust, Vellanchira, has been a beacon of educational excellence for over two decades. We provide a nurturing environment where students can thrive academically, socially, and spiritually.
+              Hudaibiyya Arabic College, run by Hudaibiyya Islamic Charitable Trust, Vottancheri, has been a beacon of educational excellence for over two decades. We provide a nurturing environment where students can thrive academically, socially, and spiritually.
             </p>
             <p className="text-md text-neutral-800/80 leading-relaxed mb-8">
               With dedicated faculty, modern facilities, and a comprehensive curriculum rooted in Islamic values, we prepare our students for the challenges of tomorrow while instilling values that will guide them throughout their lives.

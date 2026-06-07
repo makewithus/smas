@@ -1,12 +1,30 @@
 import { NextResponse } from "next/server";
+import {
+  SESSION_COOKIE_NAME,
+  canAccessPortal,
+  verifySessionToken,
+} from "@/src/lib/security/session";
 
 // Public routes that don't require authentication
-const publicRoutes = ["/login", "/setup", "/", "/about", "/events", "/contact"];
+const publicRoutes = ["/login", "/", "/about", "/events", "/contact"];
 
-export function middleware(request) {
+export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Check if it's a public route
+  if (pathname.startsWith("/api/auth/session")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api")) {
+    const session = await verifySessionToken(
+      request.cookies.get(SESSION_COOKIE_NAME)?.value,
+    ).catch(() => null);
+    if (!session) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   const isPublicRoute = publicRoutes.some(
     (route) => pathname === route || pathname.startsWith("/events/"),
   );
@@ -15,30 +33,28 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie/token
-  const authToken = request.cookies.get("auth-token")?.value;
-  const userProfile = request.cookies.get("user-profile")?.value;
+  const portal = pathname.startsWith("/boys")
+    ? "boys"
+    : pathname.startsWith("/girls")
+      ? "girls"
+      : null;
 
-  // For protected routes, check if user is authenticated
-  // Note: In a real app, you would verify the token with Firebase Admin SDK
-  // For now, we'll rely on client-side auth and localStorage
-
-  // Allow API routes to pass through (they handle their own auth)
-  if (pathname.startsWith("/api")) {
-    return NextResponse.next();
-  }
-
-  // Protected portal routes
-  const isBoysRoute = pathname.startsWith("/boys");
-  const isGirlsRoute = pathname.startsWith("/girls");
-  const isSuperRoute = pathname.startsWith("/super");
-
-  // Let client-side auth handle the redirect
-  // This middleware mainly ensures the routes exist
-  if (isBoysRoute || isGirlsRoute || isSuperRoute) {
-    // In production, you would verify the token here
-    // For now, client-side auth will handle redirects
-    return NextResponse.next();
+  if (portal) {
+    const session = await verifySessionToken(
+      request.cookies.get(SESSION_COOKIE_NAME)?.value,
+    ).catch(() => null);
+    if (!session) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = "";
+      return NextResponse.redirect(loginUrl);
+    }
+    if (!canAccessPortal(session.role, portal)) {
+      const allowedUrl = request.nextUrl.clone();
+      allowedUrl.pathname = `/${session.portal}/dashboard`;
+      allowedUrl.search = "";
+      return NextResponse.redirect(allowedUrl);
+    }
   }
 
   return NextResponse.next();

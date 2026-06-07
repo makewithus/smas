@@ -1,12 +1,25 @@
 import crypto from "crypto";
+import { cookies } from "next/headers";
+import {
+  SESSION_COOKIE_NAME,
+  verifySessionToken,
+} from "@/src/lib/security/session";
 
 export const runtime = "nodejs";
 
 export async function POST(request) {
   try {
+    const cookieStore = await cookies();
+    const session = await verifySessionToken(
+      cookieStore.get(SESSION_COOKIE_NAME)?.value,
+    );
+    if (!session) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { publicId } = await request.json();
 
-    if (!publicId) {
+    if (!publicId || typeof publicId !== "string" || publicId.length > 255) {
       return Response.json({ error: "Cloudinary public id is required" }, { status: 400 });
     }
 
